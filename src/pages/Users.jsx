@@ -1,195 +1,280 @@
-import { useState } from 'react';
-import { useData } from '../context/DataContext';
-import UserForm from '../components/UserForm';
-import './Users.css';
+import { useState, useEffect } from "react";
+import { useData } from "../context/DataContext";
+import PropertyDetailModal from "../components/PropertyDetailModal";
+import {
+  Check,
+  X,
+  Lock,
+  Unlock,
+  Trash2,
+  Search,
+  User,
+  Users,
+  Briefcase,
+} from "lucide-react";
 
-export default function Users() {
-  const { users, agents, updateUser, deleteUser, updateAgent, deleteAgent } = useData();
-  const [showForm, setShowForm] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
-  const [formType, setFormType] = useState('user');
-  const [activeTab, setActiveTab] = useState('customers');
-  const [searchTerm, setSearchTerm] = useState('');
+export default function UsersPage() {
+  const {
+    users,
+    agents,
+    builders,
+    properties,
+    updateUser,
+    deleteUser,
+    updateAgent,
+    deleteAgent,
+    updateBuilder,
+    deleteBuilder,
+  } = useData();
 
-  const filteredUsers = users.filter(user =>
-    user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const [activeTab, setActiveTab] = useState("customers");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [viewingProperty, setViewingProperty] = useState(null);
 
-  const filteredAgents = agents.filter(agent =>
-    agent.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    agent.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const [filteredUsersList, setFilteredUsersList] = useState([]);
+  const [filteredAgentsList, setFilteredAgentsList] = useState([]);
+  const [filteredBuildersList, setFilteredBuildersList] = useState([]);
 
-  const handleEdit = (item, type) => {
-    setEditingItem(item);
-    setFormType(type);
-    setShowForm(true);
-  };
+  useEffect(() => {
+    const filterBySearch = (list) =>
+      list.filter(
+        (i) =>
+          i.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          i.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    setFilteredUsersList(filterBySearch(users));
+    setFilteredAgentsList(filterBySearch(agents));
+    setFilteredBuildersList(filterBySearch(builders));
+  }, [searchTerm, users, agents, builders]);
 
   const handleDelete = (id, type) => {
     if (window.confirm(`Are you sure you want to delete this ${type}?`)) {
-      if (type === 'user') {
-        deleteUser(id);
-      } else {
-        deleteAgent(id);
-      }
+      if (type === "user") deleteUser(id);
+      else if (type === "agent") deleteAgent(id);
+      else deleteBuilder(id);
     }
   };
 
   const handleToggleActive = (id, isActive, type) => {
-    if (type === 'user') {
-      updateUser(id, { isActive: !isActive });
+    const fn =
+      type === "user"
+        ? updateUser
+        : type === "agent"
+        ? updateAgent
+        : updateBuilder;
+    fn(id, { isActive: !isActive });
+  };
+
+  const handleVerify = (id, isVerified, type) => {
+    const fn =
+      type === "user"
+        ? updateUser
+        : type === "agent"
+        ? updateAgent
+        : updateBuilder;
+    fn(id, { isVerified: !isVerified });
+  };
+
+  const handleViewProperties = (userId, userType) => {
+    const userProperties = properties.filter(
+      (p) => p.userId === userId && p.postedBy === userType
+    );
+    if (userProperties.length > 0) {
+      setViewingProperty({ userId, userType, properties: userProperties });
     } else {
-      updateAgent(id, { isActive: !isActive });
+      alert("No properties found for this user");
     }
   };
 
-  const handleVerify = (id, isVerified) => {
-    updateUser(id, { isVerified: !isVerified });
-  };
-
-  const handleCloseForm = () => {
-    setShowForm(false);
-    setEditingItem(null);
-  };
+  const renderTableRows = (list, type) =>
+    list.map((user, idx) => {
+      const propertyCount = properties.filter(
+        (p) => p.userId === user.id && p.postedBy === type
+      ).length;
+      return (
+        <tr
+          key={user.id}
+          className={`${
+            idx % 2 === 0 ? "bg-white" : "bg-gray-50"
+          } hover:bg-blue-50 transition-colors`}
+        >
+          <td className="px-5 py-3 font-medium text-gray-800 whitespace-nowrap">
+            {user.fullName}
+          </td>
+          {type === "builder" && (
+            <td className="px-5 py-3 whitespace-nowrap text-gray-700">
+              {user.companyName || <span className="text-gray-400">N/A</span>}
+            </td>
+          )}
+          <td className="px-5 py-3 text-gray-700">{user.email}</td>
+          <td className="px-5 py-3 text-gray-700">
+            {user.phone || <span className="text-gray-400">N/A</span>}
+          </td>
+          <td className="px-5 py-3">
+            <span
+              className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
+                user.isVerified
+                  ? "bg-green-100 text-green-700"
+                  : "bg-amber-100 text-amber-700"
+              }`}
+            >
+              {user.isVerified ? "Verified" : "Unverified"}
+            </span>
+          </td>
+          <td className="px-5 py-3">
+            <span
+              className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
+                user.isActive
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-red-100 text-red-700"
+              }`}
+            >
+              {user.isActive ? "Active" : "Inactive"}
+            </span>
+          </td>
+          <td className="px-5 py-3 text-sm text-gray-500 whitespace-nowrap">
+            {new Date(user.createdAt).toLocaleDateString()}
+          </td>
+          <td className="px-5 py-3">
+            {propertyCount > 0 ? (
+              <button
+                className="text-blue-600 hover:underline text-sm font-medium"
+                onClick={() => handleViewProperties(user.id, type)}
+              >
+                View ({propertyCount})
+              </button>
+            ) : (
+              <span className="text-gray-400 text-sm">None</span>
+            )}
+          </td>
+          <td className="px-5 py-3">
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleVerify(user.id, user.isVerified, type)}
+                title="Toggle Verification"
+                className="p-1.5 border border-gray-200 rounded-md hover:bg-gray-100 transition"
+              >
+                {user.isVerified ? (
+                  <Check className="w-4 h-4 text-green-600" />
+                ) : (
+                  <X className="w-4 h-4 text-gray-500" />
+                )}
+              </button>
+              <button
+                onClick={() => handleToggleActive(user.id, user.isActive, type)}
+                title="Toggle Active"
+                className="p-1.5 border border-gray-200 rounded-md hover:bg-gray-100 transition"
+              >
+                {user.isActive ? (
+                  <Unlock className="w-4 h-4 text-emerald-600" />
+                ) : (
+                  <Lock className="w-4 h-4 text-gray-600" />
+                )}
+              </button>
+              <button
+                onClick={() => handleDelete(user.id, type)}
+                title="Delete"
+                className="p-1.5 border border-gray-200 rounded-md hover:bg-red-50 transition"
+              >
+                <Trash2 className="w-4 h-4 text-red-600" />
+              </button>
+            </div>
+          </td>
+        </tr>
+      );
+    });
 
   return (
-    <div className="users-page">
-      <div className="users-header">
+    <div className="p-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <div>
-          <h1 className="page-title">Users & Agents Management</h1>
-          <p className="page-subtitle">Manage customers and agent accounts</p>
+          <h1 className="text-2xl font-bold text-gray-900">Users Management</h1>
+          <p className="text-sm text-gray-500">
+            Manage customers, agents, and builders efficiently
+          </p>
         </div>
-        <button className="btn-primary" onClick={() => { setFormType(activeTab === 'customers' ? 'user' : 'agent'); setShowForm(true); }}>
-          + Add {activeTab === 'customers' ? 'User' : 'Agent'}
-        </button>
       </div>
 
-      <div className="users-controls">
-        <div className="tab-buttons">
-          <button className={activeTab === 'customers' ? 'tab-btn active' : 'tab-btn'} onClick={() => setActiveTab('customers')}>
-            Customers ({users.length})
-          </button>
-          <button className={activeTab === 'agents' ? 'tab-btn active' : 'tab-btn'} onClick={() => setActiveTab('agents')}>
-            Agents ({agents.length})
-          </button>
+      {/* Tabs + Search */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mb-4">
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { id: "customers", label: "Customers", icon: <User />, count: users.length },
+            { id: "agents", label: "Agents", icon: <Users />, count: agents.length },
+            { id: "builders", label: "Builders", icon: <Briefcase />, count: builders.length },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium border flex items-center gap-1 transition ${
+                activeTab === tab.id
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              {tab.icon}
+              {tab.label} ({tab.count})
+            </button>
+          ))}
         </div>
-        <input
-          type="text"
-          placeholder="Search by name or email..."
-          className="search-input"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+
+        <div className="relative w-full sm:w-auto">
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by name or email..."
+            className="w-full sm:w-72 pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
       </div>
 
-      {activeTab === 'customers' ? (
-        <div className="users-table-container">
-          <table className="users-table">
-            <thead>
+      {/* Table */}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm text-left border-collapse">
+            <thead className="bg-gray-100 text-gray-600 uppercase text-xs font-semibold border-b sticky top-0 z-10">
               <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Verified</th>
-                <th>Status</th>
-                <th>Joined</th>
-                <th>Actions</th>
+                <th className="px-5 py-3">Name</th>
+                {activeTab === "builders" && <th className="px-5 py-3">Company</th>}
+                <th className="px-5 py-3">Email</th>
+                <th className="px-5 py-3">Phone</th>
+                <th className="px-5 py-3">Verified</th>
+                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3">Joined</th>
+                <th className="px-5 py-3">Properties</th>
+                <th className="px-5 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map(user => (
-                <tr key={user.id}>
-                  <td className="user-name">{user.fullName}</td>
-                  <td>{user.email}</td>
-                  <td>{user.phone || 'N/A'}</td>
-                  <td>
-                    <span className={`badge ${user.isVerified ? 'badge-success' : 'badge-warning'}`}>
-                      {user.isVerified ? 'Verified' : 'Unverified'}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`badge ${user.isActive ? 'badge-success' : 'badge-danger'}`}>
-                      {user.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td>{new Date(user.createdAt).toLocaleDateString()}</td>
-                  <td className="table-actions">
-                    <button className="btn-icon" onClick={() => handleEdit(user, 'user')} title="Edit">
-                      ✏️
-                    </button>
-                    <button className="btn-icon" onClick={() => handleVerify(user.id, user.isVerified)} title="Toggle Verification">
-                      {user.isVerified ? '✓' : '?'}
-                    </button>
-                    <button className="btn-icon" onClick={() => handleToggleActive(user.id, user.isActive, 'user')} title="Toggle Active">
-                      {user.isActive ? '🔓' : '🔒'}
-                    </button>
-                    <button className="btn-icon btn-danger" onClick={() => handleDelete(user.id, 'user')} title="Delete">
-                      🗑️
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {activeTab === "customers" &&
+                renderTableRows(filteredUsersList, "customer")}
+              {activeTab === "agents" &&
+                renderTableRows(filteredAgentsList, "agent")}
+              {activeTab === "builders" &&
+                renderTableRows(filteredBuildersList, "builder")}
             </tbody>
           </table>
-          {filteredUsers.length === 0 && (
-            <div className="empty-state">No customers found</div>
-          )}
         </div>
-      ) : (
-        <div className="users-table-container">
-          <table className="users-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Joined</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAgents.map(agent => (
-                <tr key={agent.id}>
-                  <td className="user-name">{agent.fullName}</td>
-                  <td>{agent.email}</td>
-                  <td>
-                    <span className="badge badge-info">{agent.role}</span>
-                  </td>
-                  <td>
-                    <span className={`badge ${agent.isActive ? 'badge-success' : 'badge-danger'}`}>
-                      {agent.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td>{new Date(agent.createdAt).toLocaleDateString()}</td>
-                  <td className="table-actions">
-                    <button className="btn-icon" onClick={() => handleEdit(agent, 'agent')} title="Edit">
-                      ✏️
-                    </button>
-                    <button className="btn-icon" onClick={() => handleToggleActive(agent.id, agent.isActive, 'agent')} title="Toggle Active">
-                      {agent.isActive ? '🔓' : '🔒'}
-                    </button>
-                    <button className="btn-icon btn-danger" onClick={() => handleDelete(agent.id, 'agent')} title="Delete">
-                      🗑️
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {filteredAgents.length === 0 && (
-            <div className="empty-state">No agents found</div>
-          )}
-        </div>
-      )}
 
-      {showForm && (
-        <UserForm
-          item={editingItem}
-          type={formType}
-          onClose={handleCloseForm}
+        {((activeTab === "customers" && filteredUsersList.length === 0) ||
+          (activeTab === "agents" && filteredAgentsList.length === 0) ||
+          (activeTab === "builders" && filteredBuildersList.length === 0)) && (
+          <div className="text-center text-gray-400 text-sm py-10">
+            No {activeTab} found
+          </div>
+        )}
+      </div>
+
+      {/* Property Modal */}
+      {viewingProperty && (
+        <PropertyDetailModal
+          userId={viewingProperty.userId}
+          userType={viewingProperty.userType}
+          properties={viewingProperty.properties}
+          onClose={() => setViewingProperty(null)}
         />
       )}
     </div>

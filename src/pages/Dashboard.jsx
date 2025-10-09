@@ -1,201 +1,241 @@
-import { useData } from '../context/DataContext';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import './Dashboard.css';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  Home,
+  Users,
+  MessageSquare,
+  IndianRupee,
+  PlusCircle,
+  Edit3,
+  Trash2,
+  Pin,
+} from "lucide-react";
+import { useData } from "../context/DataContext";
 
 export default function Dashboard() {
-  const { properties, users, agents, leads, payments, activityLogs } = useData();
+  const {
+    properties = [],
+    users = [],
+    agents = [],
+    leads = [],
+    payments = [],
+    activityLogs = [],
+  } = useData();
 
-  const activeProperties = properties.filter(p => p.status === 'active').length;
-  const pendingProperties = properties.filter(p => p.status === 'pending').length;
-  const soldProperties = properties.filter(p => p.status === 'sold').length;
-  const totalRevenue = payments.filter(p => p.status === 'completed').reduce((sum, p) => sum + p.amount, 0);
+  const activeProperties = properties.filter((p) => p.status === "active").length;
+  const pendingProperties = properties.filter((p) => p.status === "pending").length;
+  const soldProperties = properties.filter((p) => p.status === "sold").length;
+  const totalRevenue = payments
+    .filter((p) => p.status === "completed")
+    .reduce((sum, p) => sum + (p.amount || 0), 0);
 
   const propertyTypeData = [
-    { name: 'Apartment', value: properties.filter(p => p.propertyType === 'apartment').length },
-    { name: 'Villa', value: properties.filter(p => p.propertyType === 'villa').length },
-    { name: 'House', value: properties.filter(p => p.propertyType === 'house').length },
-    { name: 'Plot', value: properties.filter(p => p.propertyType === 'plot').length },
-    { name: 'Commercial', value: properties.filter(p => p.propertyType === 'commercial').length }
-  ];
+    { name: "Apartment", value: properties.filter((p) => p.propertyType === "apartment").length },
+    { name: "Villa", value: properties.filter((p) => p.propertyType === "villa").length },
+    { name: "House", value: properties.filter((p) => p.propertyType === "house").length },
+    { name: "Plot", value: properties.filter((p) => p.propertyType === "plot").length },
+    { name: "Commercial", value: properties.filter((p) => p.propertyType === "commercial").length },
+  ].filter((item) => item.value > 0);
 
   const leadStatusData = [
-    { name: 'New', value: leads.filter(l => l.status === 'new').length },
-    { name: 'Contacted', value: leads.filter(l => l.status === 'contacted').length },
-    { name: 'Qualified', value: leads.filter(l => l.status === 'qualified').length },
-    { name: 'Converted', value: leads.filter(l => l.status === 'converted').length },
-    { name: 'Closed', value: leads.filter(l => l.status === 'closed').length }
-  ];
+    { name: "New", value: leads.filter((l) => l.status === "new").length },
+    { name: "Contacted", value: leads.filter((l) => l.status === "contacted").length },
+    { name: "Qualified", value: leads.filter((l) => l.status === "qualified").length },
+    { name: "Converted", value: leads.filter((l) => l.status === "converted").length },
+    { name: "Closed", value: leads.filter((l) => l.status === "closed").length },
+  ].filter((item) => item.value > 0);
 
   const monthlyData = [
-    { month: 'Jan', properties: 12, leads: 45, revenue: 125000 },
-    { month: 'Feb', properties: 19, leads: 52, revenue: 185000 },
-    { month: 'Mar', properties: 15, leads: 38, revenue: 142000 },
-    { month: 'Apr', properties: 22, leads: 65, revenue: 220000 },
-    { month: 'May', properties: 18, leads: 48, revenue: 165000 },
-    { month: 'Jun', properties: 25, leads: 72, revenue: 285000 }
+    { month: "Jan", properties: 12, leads: 45, revenue: 125000 },
+    { month: "Feb", properties: 19, leads: 52, revenue: 185000 },
+    { month: "Mar", properties: 15, leads: 38, revenue: 142000 },
+    { month: "Apr", properties: 22, leads: 65, revenue: 220000 },
+    { month: "May", properties: 18, leads: 48, revenue: 165000 },
+    { month: "Jun", properties: 25, leads: 72, revenue: 285000 },
   ];
 
-  const COLORS = ['#4299e1', '#48bb78', '#ed8936', '#9f7aea', '#f56565'];
-
-  const recentActivities = activityLogs.slice(0, 8);
+  const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444"];
+  const recentActivities = (activityLogs || []).slice(0, 8);
 
   return (
-    <div className="dashboard">
-      <div className="dashboard-header">
-        <h1 className="page-title">Dashboard Overview</h1>
-        <p className="page-subtitle">Monitor your real estate business performance</p>
+    <div className="max-w-[1600px] space-y-10">
+      {/* HEADER */}
+      <div>
+        <h1 className="text-3xl font-serif font-bold text-gray-900 mb-2">
+          Dashboard Overview
+        </h1>
+        <p className="text-gray-500 text-sm">
+          Monitor your real estate business performance
+        </p>
       </div>
 
-      <div className="stats-grid">
-        <div className="stat-card stat-primary">
-          <div className="stat-icon">🏠</div>
-          <div className="stat-content">
-            <div className="stat-label">Total Properties</div>
-            <div className="stat-value">{properties.length}</div>
-            <div className="stat-detail">
-              {activeProperties} Active · {pendingProperties} Pending · {soldProperties} Sold
-            </div>
-          </div>
-        </div>
-
-        <div className="stat-card stat-success">
-          <div className="stat-icon">👥</div>
-          <div className="stat-content">
-            <div className="stat-label">Total Users</div>
-            <div className="stat-value">{users.length + agents.length}</div>
-            <div className="stat-detail">
-              {agents.length} Agents · {users.length} Customers
-            </div>
-          </div>
-        </div>
-
-        <div className="stat-card stat-warning">
-          <div className="stat-icon">💬</div>
-          <div className="stat-content">
-            <div className="stat-label">Active Leads</div>
-            <div className="stat-value">{leads.length}</div>
-            <div className="stat-detail">
-              {leads.filter(l => l.status === 'new').length} New · {leads.filter(l => l.priority === 'high').length} High Priority
-            </div>
-          </div>
-        </div>
-
-        <div className="stat-card stat-info">
-          <div className="stat-icon">💰</div>
-          <div className="stat-content">
-            <div className="stat-label">Total Revenue</div>
-            <div className="stat-value">₹{(totalRevenue / 1000).toFixed(0)}K</div>
-            <div className="stat-detail">
-              {payments.filter(p => p.status === 'pending').length} Pending Payments
-            </div>
-          </div>
-        </div>
+      {/* STATS GRID */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard
+          icon={<Home className="w-7 h-7 text-blue-500" />}
+          label="Total Properties"
+          value={properties.length}
+          detail={`${activeProperties} Active · ${pendingProperties} Pending · ${soldProperties} Sold`}
+        />
+        <StatCard
+          icon={<Users className="w-7 h-7 text-green-500" />}
+          label="Total Users"
+          value={users.length + agents.length}
+          detail={`${agents.length} Agents · ${users.length} Customers`}
+        />
+        <StatCard
+          icon={<MessageSquare className="w-7 h-7 text-amber-500" />}
+          label="Active Leads"
+          value={leads.length}
+          detail={`${leads.filter((l) => l.status === "new").length} New · ${
+            leads.filter((l) => l.priority === "high").length
+          } High Priority`}
+        />
+        <StatCard
+          icon={<IndianRupee className="w-7 h-7 text-purple-500" />}
+          label="Total Revenue"
+          value={`₹${(totalRevenue / 1000).toFixed(0)}K`}
+          detail={`${payments.filter((p) => p.status === "pending").length} Pending Payments`}
+        />
       </div>
 
-      <div className="charts-grid">
-        <div className="chart-card chart-large">
-          <h3 className="chart-title">Monthly Performance</h3>
+      {/* CHARTS */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="col-span-2 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-serif font-semibold text-gray-900 mb-4">
+            Monthly Performance
+          </h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="month" stroke="#718096" style={{ fontSize: 12, fontFamily: 'Roboto' }} />
-              <YAxis stroke="#718096" style={{ fontSize: 12, fontFamily: 'Roboto' }} />
-              <Tooltip contentStyle={{ fontFamily: 'Roboto', fontSize: 13 }} />
-              <Legend wrapperStyle={{ fontFamily: 'Roboto', fontSize: 13 }} />
-              <Line type="monotone" dataKey="properties" stroke="#4299e1" strokeWidth={2} name="Properties Listed" />
-              <Line type="monotone" dataKey="leads" stroke="#48bb78" strokeWidth={2} name="Leads Generated" />
+              <XAxis dataKey="month" stroke="#6b7280" />
+              <YAxis stroke="#6b7280" />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="properties" stroke="#3b82f6" strokeWidth={2} />
+              <Line type="monotone" dataKey="leads" stroke="#10b981" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="chart-card">
-          <h3 className="chart-title">Property Types</h3>
+        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-serif font-semibold text-gray-900 mb-4">
+            Property Types
+          </h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
                 data={propertyTypeData}
                 cx="50%"
                 cy="50%"
+                outerRadius={90}
                 labelLine={false}
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={90}
-                fill="#8884d8"
                 dataKey="value"
               >
-                {propertyTypeData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                {propertyTypeData.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={{ fontFamily: 'Roboto', fontSize: 13 }} />
+              <Tooltip />
             </PieChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="chart-card">
-          <h3 className="chart-title">Lead Status</h3>
+        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-serif font-semibold text-gray-900 mb-4">
+            Lead Status
+          </h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={leadStatusData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="name" stroke="#718096" style={{ fontSize: 12, fontFamily: 'Roboto' }} />
-              <YAxis stroke="#718096" style={{ fontSize: 12, fontFamily: 'Roboto' }} />
-              <Tooltip contentStyle={{ fontFamily: 'Roboto', fontSize: 13 }} />
-              <Bar dataKey="value" fill="#4299e1" />
+              <XAxis dataKey="name" stroke="#6b7280" />
+              <YAxis stroke="#6b7280" />
+              <Tooltip />
+              <Bar dataKey="value" fill="#3b82f6" />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="dashboard-bottom">
-        <div className="activity-card">
-          <h3 className="card-title">Recent Activities</h3>
-          <div className="activity-list">
-            {recentActivities.length > 0 ? (
-              recentActivities.map(log => (
-                <div key={log.id} className="activity-item">
-                  <div className="activity-icon">{getActivityIcon(log.action)}</div>
-                  <div className="activity-content">
-                    <div className="activity-text">
-                      <strong>{log.action}</strong> on {log.entityType}
-                      {log.details?.title && ` - ${log.details.title}`}
+      {/* ACTIVITY + QUICK STATS */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Activities */}
+        <div className="lg:col-span-2 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-serif font-semibold text-gray-900 mb-4">
+            Recent Activities
+          </h3>
+          {recentActivities.length > 0 ? (
+            <div className="space-y-3">
+              {recentActivities.map((log) => (
+                <div
+                  key={log.id}
+                  className="flex items-start gap-3 bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition"
+                >
+                  <div className="w-10 h-10 flex items-center justify-center bg-white rounded-md border border-gray-200">
+                    {getActivityIcon(log.action)}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm text-gray-800">
+                      <strong>{log.action}</strong> on {log.entityType}{" "}
+                      {log.details?.title && `- ${log.details.title}`}
                       {log.details?.fullName && ` - ${log.details.fullName}`}
                     </div>
-                    <div className="activity-time">{formatTime(log.createdAt)}</div>
+                    <div className="text-xs text-gray-400">
+                      {formatTime(log.createdAt)}
+                    </div>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="empty-state">No recent activities</div>
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-gray-400 py-10">No recent activities</div>
+          )}
         </div>
 
-        <div className="quick-stats-card">
-          <h3 className="card-title">Quick Stats</h3>
-          <div className="quick-stats-list">
-            <div className="quick-stat-item">
-              <span className="quick-stat-label">Featured Properties</span>
-              <span className="quick-stat-value">{properties.filter(p => p.isFeatured).length}</span>
-            </div>
-            <div className="quick-stat-item">
-              <span className="quick-stat-label">Total Views</span>
-              <span className="quick-stat-value">{properties.reduce((sum, p) => sum + p.viewsCount, 0)}</span>
-            </div>
-            <div className="quick-stat-item">
-              <span className="quick-stat-label">Active Agents</span>
-              <span className="quick-stat-value">{agents.filter(a => a.isActive).length}</span>
-            </div>
-            <div className="quick-stat-item">
-              <span className="quick-stat-label">Verified Users</span>
-              <span className="quick-stat-value">{users.filter(u => u.isVerified).length}</span>
-            </div>
-            <div className="quick-stat-item">
-              <span className="quick-stat-label">Completed Payments</span>
-              <span className="quick-stat-value">{payments.filter(p => p.status === 'completed').length}</span>
-            </div>
-            <div className="quick-stat-item">
-              <span className="quick-stat-label">High Priority Leads</span>
-              <span className="quick-stat-value">{leads.filter(l => l.priority === 'high').length}</span>
-            </div>
+        {/* Quick Stats */}
+        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-serif font-semibold text-gray-900 mb-4">
+            Quick Stats
+          </h3>
+          <div className="divide-y divide-gray-200">
+            <QuickStat
+              label="Featured Properties"
+              value={properties.filter((p) => p.isFeatured).length}
+            />
+            <QuickStat
+              label="Total Views"
+              value={properties.reduce((sum, p) => sum + (p.viewsCount || 0), 0)}
+            />
+            <QuickStat
+              label="Active Agents"
+              value={agents.filter((a) => a.isActive).length}
+            />
+            <QuickStat
+              label="Verified Users"
+              value={users.filter((u) => u.isVerified).length}
+            />
+            <QuickStat
+              label="Completed Payments"
+              value={payments.filter((p) => p.status === "completed").length}
+            />
+            <QuickStat
+              label="High Priority Leads"
+              value={leads.filter((l) => l.priority === "high").length}
+            />
           </div>
         </div>
       </div>
@@ -203,24 +243,54 @@ export default function Dashboard() {
   );
 }
 
+/* ---------- Reusable Components ---------- */
+function StatCard({ icon, label, value, detail }) {
+  return (
+    <div className="bg-white rounded-xl p-5 flex items-start gap-4 border border-gray-200 shadow-sm hover:shadow-md transition">
+      <div className="w-14 h-14 flex items-center justify-center rounded-lg bg-gray-50">
+        {icon}
+      </div>
+      <div className="flex-1">
+        <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-1">
+          {label}
+        </p>
+        <h4 className="text-2xl font-serif font-bold text-gray-900 leading-none">
+          {value}
+        </h4>
+        <p className="text-sm text-gray-400 mt-1">{detail}</p>
+      </div>
+    </div>
+  );
+}
+
+function QuickStat({ label, value }) {
+  return (
+    <div className="flex items-center justify-between py-3">
+      <span className="text-gray-600 text-sm">{label}</span>
+      <span className="text-gray-900 font-semibold text-base">{value}</span>
+    </div>
+  );
+}
+
+/* ---------- Utilities ---------- */
 function getActivityIcon(action) {
   const icons = {
-    CREATE: '✨',
-    UPDATE: '📝',
-    DELETE: '🗑️'
+    CREATE: <PlusCircle className="w-5 h-5 text-blue-500" />,
+    UPDATE: <Edit3 className="w-5 h-5 text-amber-500" />,
+    DELETE: <Trash2 className="w-5 h-5 text-red-500" />,
   };
-  return icons[action] || '📌';
+  return icons[action] || <Pin className="w-5 h-5 text-gray-500" />;
 }
 
 function formatTime(timestamp) {
+  if (!timestamp) return "";
   const date = new Date(timestamp);
-  const now = new Date();
-  const diffMs = now - date;
+  const diffMs = new Date() - date;
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return 'Just now';
+  if (diffMins < 1) return "Just now";
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
