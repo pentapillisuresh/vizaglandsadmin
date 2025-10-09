@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useData } from '../context/DataContext';
-import './PropertyForm.css';
+// import './PropertyForm.css';
 
 export default function PlanForm({ plan, onClose }) {
   const { addPlan, updatePlan } = useData();

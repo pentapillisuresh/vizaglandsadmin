@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useData } from '../context/DataContext';
-import './PropertyForm.css';
+// import './PropertyForm.css';
 
 export default function BannerForm({ banner, onClose }) {
   const { addBanner, updateBanner } = useData();
