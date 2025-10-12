@@ -8,6 +8,7 @@ import Leads from './pages/Leads';
 import Payments from './pages/Payments';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import Schedule from './pages/Schedule';
 import './App.css';
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="properties" element={<Properties />} />
             <Route path="users" element={<Users />} />
+            <Route path="schedule" element={<Schedule />} />
             <Route path="leads" element={<Leads />} />
             <Route path="payments" element={<Payments />} />
             <Route path="reports" element={<Reports />} />

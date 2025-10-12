@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   Home,
   Users,
+  Calendar, // ← Added for schedule
   MessageSquare,
   CreditCard,
   BarChart3,
@@ -14,6 +15,8 @@ export default function Sidebar() {
     { path: "/", icon: LayoutDashboard, label: "Dashboard" },
     { path: "/properties", icon: Home, label: "Properties" },
     { path: "/users", icon: Users, label: "Users & Agents" },
+    { path: "/schedule", icon: Calendar, label: "Schedule" }, // ← Use Calendar icon
+
     // { path: "/leads", icon: MessageSquare, label: "Leads" },
     // { path: "/payments", icon: CreditCard, label: "Payments & Plans" },
     // { path: "/reports", icon: BarChart3, label: "Reports" },
