@@ -1,8 +1,6 @@
 import {
   LineChart,
   Line,
-  BarChart,
-  Bar,
   PieChart,
   Pie,
   Cell,
@@ -16,8 +14,6 @@ import {
 import {
   Home,
   Users,
-  MessageSquare,
-  IndianRupee,
   PlusCircle,
   Edit3,
   Trash2,
@@ -30,17 +26,12 @@ export default function Dashboard() {
     properties = [],
     users = [],
     agents = [],
-    leads = [],
-    payments = [],
     activityLogs = [],
   } = useData();
 
   const activeProperties = properties.filter((p) => p.status === "active").length;
   const pendingProperties = properties.filter((p) => p.status === "pending").length;
   const soldProperties = properties.filter((p) => p.status === "sold").length;
-  const totalRevenue = payments
-    .filter((p) => p.status === "completed")
-    .reduce((sum, p) => sum + (p.amount || 0), 0);
 
   const propertyTypeData = [
     { name: "Apartment", value: properties.filter((p) => p.propertyType === "apartment").length },
@@ -50,28 +41,20 @@ export default function Dashboard() {
     { name: "Commercial", value: properties.filter((p) => p.propertyType === "commercial").length },
   ].filter((item) => item.value > 0);
 
-  const leadStatusData = [
-    { name: "New", value: leads.filter((l) => l.status === "new").length },
-    { name: "Contacted", value: leads.filter((l) => l.status === "contacted").length },
-    { name: "Qualified", value: leads.filter((l) => l.status === "qualified").length },
-    { name: "Converted", value: leads.filter((l) => l.status === "converted").length },
-    { name: "Closed", value: leads.filter((l) => l.status === "closed").length },
-  ].filter((item) => item.value > 0);
-
   const monthlyData = [
-    { month: "Jan", properties: 12, leads: 45, revenue: 125000 },
-    { month: "Feb", properties: 19, leads: 52, revenue: 185000 },
-    { month: "Mar", properties: 15, leads: 38, revenue: 142000 },
-    { month: "Apr", properties: 22, leads: 65, revenue: 220000 },
-    { month: "May", properties: 18, leads: 48, revenue: 165000 },
-    { month: "Jun", properties: 25, leads: 72, revenue: 285000 },
+    { month: "Jan", properties: 12 },
+    { month: "Feb", properties: 19 },
+    { month: "Mar", properties: 15 },
+    { month: "Apr", properties: 22 },
+    { month: "May", properties: 18 },
+    { month: "Jun", properties: 25 },
   ];
 
   const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444"];
   const recentActivities = (activityLogs || []).slice(0, 8);
 
   return (
-    <div className="max-w-[1600px] space-y-10">
+    <div className="max-w-[1600px] space-y-10 p-4">
       {/* HEADER */}
       <div>
         <h1 className="text-3xl font-serif font-bold text-gray-900 mb-2">
@@ -96,27 +79,13 @@ export default function Dashboard() {
           value={users.length + agents.length}
           detail={`${agents.length} Agents · ${users.length} Customers`}
         />
-        <StatCard
-          icon={<MessageSquare className="w-7 h-7 text-amber-500" />}
-          label="Active Leads"
-          value={leads.length}
-          detail={`${leads.filter((l) => l.status === "new").length} New · ${
-            leads.filter((l) => l.priority === "high").length
-          } High Priority`}
-        />
-        <StatCard
-          icon={<IndianRupee className="w-7 h-7 text-purple-500" />}
-          label="Total Revenue"
-          value={`₹${(totalRevenue / 1000).toFixed(0)}K`}
-          detail={`${payments.filter((p) => p.status === "pending").length} Pending Payments`}
-        />
       </div>
 
       {/* CHARTS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        <div className="col-span-2 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
           <h3 className="text-lg font-serif font-semibold text-gray-900 mb-4">
-            Monthly Performance
+            Monthly Properties Added
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={monthlyData}>
@@ -126,7 +95,6 @@ export default function Dashboard() {
               <Tooltip />
               <Legend />
               <Line type="monotone" dataKey="properties" stroke="#3b82f6" strokeWidth={2} />
-              <Line type="monotone" dataKey="leads" stroke="#10b981" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -152,21 +120,6 @@ export default function Dashboard() {
               </Pie>
               <Tooltip />
             </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-serif font-semibold text-gray-900 mb-4">
-            Lead Status
-          </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={leadStatusData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="name" stroke="#6b7280" />
-              <YAxis stroke="#6b7280" />
-              <Tooltip />
-              <Bar dataKey="value" fill="#3b82f6" />
-            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
@@ -227,14 +180,6 @@ export default function Dashboard() {
             <QuickStat
               label="Verified Users"
               value={users.filter((u) => u.isVerified).length}
-            />
-            <QuickStat
-              label="Completed Payments"
-              value={payments.filter((p) => p.status === "completed").length}
-            />
-            <QuickStat
-              label="High Priority Leads"
-              value={leads.filter((l) => l.priority === "high").length}
             />
           </div>
         </div>

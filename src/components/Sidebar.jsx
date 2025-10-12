@@ -15,8 +15,8 @@ export default function Sidebar() {
     { path: "/properties", icon: Home, label: "Properties" },
     { path: "/users", icon: Users, label: "Users & Agents" },
     // { path: "/leads", icon: MessageSquare, label: "Leads" },
-    { path: "/payments", icon: CreditCard, label: "Payments & Plans" },
-    { path: "/reports", icon: BarChart3, label: "Reports" },
+    // { path: "/payments", icon: CreditCard, label: "Payments & Plans" },
+    // { path: "/reports", icon: BarChart3, label: "Reports" },
     { path: "/settings", icon: Settings, label: "Settings" },
   ];
 
