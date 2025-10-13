@@ -1,27 +1,28 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Home,
   Users,
-  Calendar, // ← Added for schedule
-  MessageSquare,
-  CreditCard,
-  BarChart3,
+  Calendar,
   Settings,
+  LogOut, // ← Added for logout
 } from "lucide-react";
 
 export default function Sidebar() {
+  const navigate = useNavigate();
+
   const menuItems = [
     { path: "/", icon: LayoutDashboard, label: "Dashboard" },
     { path: "/properties", icon: Home, label: "Properties" },
     { path: "/users", icon: Users, label: "Users & Agents" },
-    { path: "/schedule", icon: Calendar, label: "Schedule" }, // ← Use Calendar icon
-
-    // { path: "/leads", icon: MessageSquare, label: "Leads" },
-    // { path: "/payments", icon: CreditCard, label: "Payments & Plans" },
-    // { path: "/reports", icon: BarChart3, label: "Reports" },
+    { path: "/schedule", icon: Calendar, label: "Schedule" },
     { path: "/settings", icon: Settings, label: "Settings" },
   ];
+
+  const handleLogout = () => {
+    localStorage.removeItem("isAdminLoggedIn");
+    navigate("/login");
+  };
 
   return (
     <aside className="w-64 h-screen fixed left-0 top-0 bg-gradient-to-b from-[#1e3a5f] to-[#0f1e33] shadow-lg flex flex-col z-50">
@@ -56,6 +57,17 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Logout Button */}
+      <div className="border-t border-white/10 px-6 py-4">
+        <button
+          onClick={handleLogout}
+          className="flex items-center justify-center w-full bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 rounded-lg transition-all"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Logout
+        </button>
+      </div>
     </aside>
   );
 }

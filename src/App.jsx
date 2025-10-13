@@ -1,22 +1,38 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { DataProvider } from './context/DataContext';
-import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import Properties from './pages/Properties';
-import Users from './pages/Users';
-import Leads from './pages/Leads';
-import Payments from './pages/Payments';
-import Reports from './pages/Reports';
-import Settings from './pages/Settings';
-import Schedule from './pages/Schedule';
-import './App.css';
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { DataProvider } from "./context/DataContext";
+import Layout from "./components/Layout";
+import Dashboard from "./pages/Dashboard";
+import Properties from "./pages/Properties";
+import Users from "./pages/Users";
+import Schedule from "./pages/Schedule";
+import Leads from "./pages/Leads";
+import Payments from "./pages/Payments";
+import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
+import Login from "./pages/Login";
+import "./App.css";
+
+// ✅ Protect admin routes
+function PrivateRoute({ children }) {
+  const isLoggedIn = localStorage.getItem("isAdminLoggedIn");
+  return isLoggedIn ? children : <Navigate to="/login" replace />;
+}
 
 function App() {
   return (
     <DataProvider>
       <Router>
         <Routes>
-          <Route path="/" element={<Layout />}>
+          <Route path="/login" element={<Login />} />
+
+          <Route
+            path="/"
+            element={
+              <PrivateRoute>
+                <Layout />
+              </PrivateRoute>
+            }
+          >
             <Route index element={<Dashboard />} />
             <Route path="properties" element={<Properties />} />
             <Route path="users" element={<Users />} />
