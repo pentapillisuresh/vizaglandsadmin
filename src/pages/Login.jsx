@@ -24,13 +24,29 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Side - Image */}
-      <div className="hidden md:flex md:w-1/2 bg-blue-900 items-center justify-center">
+      {/* Left Side - Image with Welcome Text */}
+      <div className="hidden md:flex md:w-1/2 relative bg-blue-900 items-center justify-center">
         <img
           src="https://images.unsplash.com/photo-1568605114967-8130f3a36994"
           alt="Login Illustration"
           className="w-full h-full object-cover opacity-90"
         />
+
+        {/* Overlay gradient for text visibility */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/70"></div>
+
+        {/* Welcome Text */}
+        <div className="absolute text-center px-6">
+          <h1 className="text-4xl font-bold text-white mb-2 drop-shadow-lg">
+            Welcome to
+          </h1>
+          <h2 className="text-5xl font-extrabold text-blue-400 drop-shadow-lg">
+            VizagLands
+          </h2>
+          <p className="text-white/80 mt-3 text-sm">
+            Admin Portal – Manage Properties, Users & More
+          </p>
+        </div>
       </div>
 
       {/* Right Side - Login Form */}
@@ -88,7 +104,7 @@ export default function Login() {
           </form>
 
           <p className="text-white/50 text-xs text-center mt-5">
-            © {new Date().getFullYear()} RealEstate Admin Panel
+            © {new Date().getFullYear()} VizagLands Admin Panel
           </p>
         </div>
       </div>
