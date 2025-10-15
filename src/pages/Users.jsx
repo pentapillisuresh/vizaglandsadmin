@@ -200,7 +200,7 @@ export default function UsersPage() {
       <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mb-4">
         <div className="flex gap-2 flex-wrap">
           {[
-            { id: "customers", label: "Customers", icon: <User />, count: users.length },
+            { id: "customers", label: "Owners", icon: <User />, count: users.length },
             { id: "agents", label: "Agents", icon: <Users />, count: agents.length },
             { id: "builders", label: "Builders", icon: <Briefcase />, count: builders.length },
           ].map((tab) => (

@@ -14,9 +14,14 @@ export default function Sidebar() {
   const menuItems = [
     { path: "/", icon: LayoutDashboard, label: "Dashboard" },
     { path: "/properties", icon: Home, label: "Properties" },
-    { path: "/users", icon: Users, label: "Users & Agents" },
-    { path: "/schedule", icon: Calendar, label: "Schedule" },
+    { path: "/users", icon: Users, label: "Users & Agents & builders" },
+    { path: "/schedule", icon: Calendar, label: "Leads" },
+    { path: "/buy-development", icon: Calendar, label: "property enquiry" },
+    { path: "/content", icon: LayoutDashboard, label: "Manage Content" },
+
     { path: "/settings", icon: Settings, label: "Settings" },
+
+
   ];
 
   const handleLogout = () => {

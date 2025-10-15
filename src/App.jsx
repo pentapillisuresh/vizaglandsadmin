@@ -10,6 +10,9 @@ import Payments from "./pages/Payments";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
+import BuyDevelopment from "./pages/BuyDevelopment";
+import ContentManager from "./pages/ContentManager";
+
 import "./App.css";
 
 // ✅ Protect admin routes
@@ -38,6 +41,9 @@ function App() {
             <Route path="users" element={<Users />} />
             <Route path="schedule" element={<Schedule />} />
             <Route path="leads" element={<Leads />} />
+            <Route path="buy-development" element={<BuyDevelopment />} />
+            <Route path="content" element={<ContentManager />} />
+
             <Route path="payments" element={<Payments />} />
             <Route path="reports" element={<Reports />} />
             <Route path="settings" element={<Settings />} />
