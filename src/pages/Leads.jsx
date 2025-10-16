@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useData } from "../context/DataContext";
-import LeadForm from "../components/LeadForm";
+// import LeadForm from "../components/LeadForm";
 import {
   User,
   Home,

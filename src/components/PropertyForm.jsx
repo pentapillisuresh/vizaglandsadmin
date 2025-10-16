@@ -1,45 +1,31 @@
 import { useState } from "react";
 import { useData } from "../context/DataContext";
-import {
-  X,
-  Home,
-  MapPin,
-  Landmark,
-  IndianRupee,
-  Layers,
-  Building2,
-  Image as ImageIcon,
-  ListChecks,
-  CheckSquare,
-} from "lucide-react";
+import { X } from "lucide-react";
 
 export default function PropertyForm({ property, onClose }) {
-  const { addProperty, updateProperty, agents } = useData();
+  const { addProperty, updateProperty, users, agents, builders } = useData();
 
   const [formData, setFormData] = useState({
     title: property?.title || "",
     description: property?.description || "",
-    propertyType: property?.propertyType || "apartment",
-    listingType: property?.listingType || "sale",
+    propertyType: property?.propertyType || "residential",
+    propertySubtype: property?.propertySubtype || "apartment",
+    listingType: property?.listingType || "sell",
     price: property?.price || "",
-    location: property?.location || "",
     city: property?.city || "",
-    state: property?.state || "",
-    areaSqft: property?.areaSqft || "",
-    bedrooms: property?.bedrooms || "",
-    bathrooms: property?.bathrooms || "",
-    agentId: property?.agentId || agents[0]?.id || "",
-    status: property?.status || "pending",
-    isFeatured: property?.isFeatured || false,
-    images: property?.images?.[0] || "",
-    amenities: property?.amenities?.join(", ") || "",
+    locality: property?.locality || "",
+    subLocality: property?.subLocality || "",
+    facing: property?.facing || "north",
+    photos: property?.photos?.[0] || "",
+    postedBy: property?.postedBy || "agent",
+    userId: property?.userId || "",
   });
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: name === "price" ? (value ? parseInt(value) : "") : value,
     }));
   };
 
@@ -48,298 +34,274 @@ export default function PropertyForm({ property, onClose }) {
 
     const propertyData = {
       ...formData,
-      price: Number(formData.price),
-      areaSqft: Number(formData.areaSqft),
-      bedrooms: Number(formData.bedrooms),
-      bathrooms: Number(formData.bathrooms),
-      images: formData.images ? [formData.images] : [],
-      amenities: formData.amenities
-        ? formData.amenities.split(",").map((a) => a.trim())
-        : [],
+      photos: formData.photos ? [formData.photos] : [],
     };
 
-    if (property) updateProperty(property.id, propertyData);
-    else addProperty(propertyData);
+    if (property) {
+      updateProperty(property.id, propertyData);
+    } else {
+      addProperty(propertyData);
+    }
 
     onClose();
   };
 
+  const getUserOptions = () => {
+    switch (formData.postedBy) {
+      case "agent":
+        return agents;
+      case "builder":
+        return builders;
+      case "customer":
+        return users;
+      default:
+        return [];
+    }
+  };
+
   return (
-    <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl"
+        className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex justify-between items-center p-5 border-b border-gray-200 sticky top-0 bg-white z-10">
-          <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-            <Home className="w-5 h-5 text-blue-600" />
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-gray-900">
             {property ? "Edit Property" : "Add New Property"}
           </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition"
-          >
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition">
+            <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Title */}
-            <InputField
-              label="Property Title *"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              required
-            />
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Property Title <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                required
+              />
+            </div>
 
-            {/* Type */}
-            <SelectField
-              label="Property Type *"
-              name="propertyType"
-              value={formData.propertyType}
-              onChange={handleChange}
-              options={[
-                "apartment",
-                "house",
-                "villa",
-                "plot",
-                "commercial",
-              ]}
-            />
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                rows="3"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
 
-            {/* Listing Type */}
-            <SelectField
-              label="Listing Type *"
-              name="listingType"
-              value={formData.listingType}
-              onChange={handleChange}
-              options={["sale", "rent"]}
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Property Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="propertyType"
+                value={formData.propertyType}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                required
+              >
+                <option value="residential">Residential</option>
+                <option value="commercial">Commercial</option>
+                <option value="industrial">Industrial</option>
+                <option value="land">Land</option>
+              </select>
+            </div>
 
-            {/* Price */}
-            <InputField
-              label="Price (₹) *"
-              name="price"
-              type="number"
-              icon={<IndianRupee className="w-4 h-4 text-gray-500" />}
-              value={formData.price}
-              onChange={handleChange}
-              required
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Property Subtype <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="propertySubtype"
+                value={formData.propertySubtype}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                required
+              >
+                <option value="apartment">Apartment</option>
+                <option value="villa">Villa</option>
+                <option value="house">House</option>
+                <option value="penthouse">Penthouse</option>
+                <option value="office">Office</option>
+                <option value="shop">Shop</option>
+                <option value="warehouse">Warehouse</option>
+              </select>
+            </div>
 
-            {/* Area */}
-            <InputField
-              label="Area (sq.ft) *"
-              name="areaSqft"
-              type="number"
-              icon={<Layers className="w-4 h-4 text-gray-500" />}
-              value={formData.areaSqft}
-              onChange={handleChange}
-              required
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Listing Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="listingType"
+                value={formData.listingType}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                required
+              >
+                <option value="sell">For Sale</option>
+                <option value="rent">For Rent</option>
+                <option value="lease">For Lease</option>
+              </select>
+            </div>
 
-            {/* Bedrooms */}
-            <InputField
-              label="Bedrooms *"
-              name="bedrooms"
-              type="number"
-              value={formData.bedrooms}
-              onChange={handleChange}
-              required
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Price (₹) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                name="price"
+                value={formData.price}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                required
+              />
+            </div>
 
-            {/* Bathrooms */}
-            <InputField
-              label="Bathrooms *"
-              name="bathrooms"
-              type="number"
-              value={formData.bathrooms}
-              onChange={handleChange}
-              required
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                City <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="city"
+                value={formData.city}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                required
+              />
+            </div>
 
-            {/* Location */}
-            <InputField
-              label="Location *"
-              name="location"
-              icon={<MapPin className="w-4 h-4 text-gray-500" />}
-              value={formData.location}
-              onChange={handleChange}
-              required
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Locality</label>
+              <input
+                type="text"
+                name="locality"
+                value={formData.locality}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
 
-            {/* City */}
-            <InputField
-              label="City *"
-              name="city"
-              value={formData.city}
-              onChange={handleChange}
-              required
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Sub Locality</label>
+              <input
+                type="text"
+                name="subLocality"
+                value={formData.subLocality}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
 
-            {/* State */}
-            <InputField
-              label="State *"
-              name="state"
-              icon={<Landmark className="w-4 h-4 text-gray-500" />}
-              value={formData.state}
-              onChange={handleChange}
-              required
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Facing</label>
+              <select
+                name="facing"
+                value={formData.facing}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="north">North</option>
+                <option value="south">South</option>
+                <option value="east">East</option>
+                <option value="west">West</option>
+                <option value="north-east">North-East</option>
+                <option value="north-west">North-West</option>
+                <option value="south-east">South-East</option>
+                <option value="south-west">South-West</option>
+              </select>
+            </div>
 
-            {/* Agent */}
-            <SelectField
-              label="Agent *"
-              name="agentId"
-              value={formData.agentId}
-              onChange={handleChange}
-              options={agents.map((a) => ({
-                value: a.id,
-                label: a.fullName,
-              }))}
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Posted By <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="postedBy"
+                value={formData.postedBy}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                required
+              >
+                <option value="agent">Agent</option>
+                <option value="builder">Builder</option>
+                <option value="customer">Customer</option>
+              </select>
+            </div>
 
-            {/* Status */}
-            <SelectField
-              label="Status *"
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-              options={["pending", "active", "sold", "rejected"]}
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                User <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="userId"
+                value={formData.userId}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                required
+              >
+                <option value="">Select User</option>
+                {getUserOptions().map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.fullName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Photo URL
+              </label>
+              <input
+                type="url"
+                name="photos"
+                value={formData.photos}
+                onChange={handleChange}
+                placeholder="https://example.com/image.jpg"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              {formData.photos && (
+                <img
+                  src={formData.photos}
+                  alt="Preview"
+                  className="mt-3 w-full h-48 object-cover rounded-lg border border-gray-200"
+                />
+              )}
+            </div>
           </div>
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description *
-            </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-            ></textarea>
-          </div>
-
-          {/* Image URL */}
-          <InputField
-            label="Image URL"
-            name="images"
-            value={formData.images}
-            onChange={handleChange}
-            icon={<ImageIcon className="w-4 h-4 text-gray-500" />}
-            placeholder="https://example.com/image.jpg"
-          />
-
-          {/* Amenities */}
-          <InputField
-            label="Amenities (comma-separated)"
-            name="amenities"
-            value={formData.amenities}
-            onChange={handleChange}
-            icon={<ListChecks className="w-4 h-4 text-gray-500" />}
-            placeholder="Parking, Gym, Swimming Pool"
-          />
-
-          {/* Featured Checkbox */}
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-            <input
-              type="checkbox"
-              name="isFeatured"
-              checked={formData.isFeatured}
-              onChange={handleChange}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded"
-            />
-            <CheckSquare className="w-4 h-4 text-blue-600" />
-            Mark as Featured
-          </label>
-
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition"
+              className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-gradient-to-r from-blue-800 to-blue-500 text-white rounded-lg shadow hover:shadow-md text-sm font-medium transition-all"
+              className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
             >
               {property ? "Update Property" : "Add Property"}
             </button>
           </div>
         </form>
       </div>
-    </div>
-  );
-}
-
-/* ---------- Subcomponents ---------- */
-function InputField({
-  label,
-  name,
-  value,
-  onChange,
-  type = "text",
-  required,
-  icon,
-  placeholder,
-}) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        {label}
-      </label>
-      <div className="flex items-center border border-gray-300 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-blue-500">
-        {icon && <div className="mr-2">{icon}</div>}
-        <input
-          type={type}
-          name={name}
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          required={required}
-          className="w-full text-sm text-gray-800 focus:outline-none bg-transparent"
-        />
-      </div>
-    </div>
-  );
-}
-
-function SelectField({ label, name, value, onChange, options }) {
-  const opts =
-    typeof options[0] === "string"
-      ? options.map((o) => ({ value: o, label: o }))
-      : options;
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        {label}
-      </label>
-      <select
-        name={name}
-        value={value}
-        onChange={onChange}
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-      >
-        {opts.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
     </div>
   );
 }
