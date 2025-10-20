@@ -3,7 +3,7 @@ import { useData } from "../context/DataContext";
 import { X, Settings, MapPin, IndianRupee, Eye, CheckCircle, XCircle } from "lucide-react";
 
 export default function UserDetails({ user, type, onClose }) {
-  const { properties, updatePropertyPermission } = useData();
+  const { properties, updatePropertyPermission, updateDocsVerification, updatePropertyStatus } = useData();
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [permissionData, setPermissionData] = useState({
     canAddProperty: user.canAddProperty,
@@ -25,12 +25,26 @@ export default function UserDetails({ user, type, onClose }) {
 
   const handleApproveDocs = () => {
     setIsDocsVerified(true);
-    alert("Documents approved successfully ✅");
+    updateDocsVerification(user.id, type, true);
+    alert("Documents approved successfully");
   };
 
   const handleRejectDocs = () => {
     setIsDocsVerified(false);
-    alert("Documents rejected ❌");
+    updateDocsVerification(user.id, type, false);
+    alert("Documents rejected");
+  };
+
+  const handleApproveProperty = (propertyId) => {
+    if (window.confirm("Are you sure you want to approve this property?")) {
+      updatePropertyStatus(propertyId, "approved");
+    }
+  };
+
+  const handleRejectProperty = (propertyId) => {
+    if (window.confirm("Are you sure you want to reject this property?")) {
+      updatePropertyStatus(propertyId, "rejected");
+    }
   };
 
   const getStatusColor = (status) => {
@@ -55,7 +69,6 @@ export default function UserDetails({ user, type, onClose }) {
         className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-gray-900">
             {type === "customer"
@@ -71,7 +84,6 @@ export default function UserDetails({ user, type, onClose }) {
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Personal Info + Account Status */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-gray-50 rounded-lg p-5">
               <h3 className="text-sm font-semibold text-gray-500 uppercase mb-4">
@@ -138,7 +150,6 @@ export default function UserDetails({ user, type, onClose }) {
             </div>
           </div>
 
-          {/* 🧾 Documents Verification Section */}
           <div className="bg-gray-50 rounded-lg p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-gray-500 uppercase">
@@ -188,7 +199,6 @@ export default function UserDetails({ user, type, onClose }) {
             </div>
           </div>
 
-          {/* Property Permissions */}
           <div className="bg-gray-50 rounded-lg p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-gray-500 uppercase">
@@ -214,7 +224,6 @@ export default function UserDetails({ user, type, onClose }) {
             </div>
           </div>
 
-          {/* Properties */}
           <div>
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-4">
               Properties ({userProperties.length})
@@ -251,7 +260,7 @@ export default function UserDetails({ user, type, onClose }) {
                         <MapPin className="w-3 h-3 mr-1" />
                         {property.city}
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center text-sm font-semibold text-blue-700">
                           <IndianRupee className="w-4 h-4" />
                           {property.price?.toLocaleString("en-IN")}
@@ -261,6 +270,25 @@ export default function UserDetails({ user, type, onClose }) {
                           {property.viewsCount}
                         </div>
                       </div>
+
+                      {property.status === "pending" && (
+                        <div className="flex gap-2 mt-3 pt-3 border-t">
+                          <button
+                            onClick={() => handleApproveProperty(property.id)}
+                            className="flex-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-xs flex items-center justify-center gap-1"
+                          >
+                            <CheckCircle className="w-3 h-3" />
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleRejectProperty(property.id)}
+                            className="flex-1 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-xs flex items-center justify-center gap-1"
+                          >
+                            <XCircle className="w-3 h-3" />
+                            Reject
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -273,7 +301,6 @@ export default function UserDetails({ user, type, onClose }) {
           </div>
         </div>
 
-        {/* Permission Modal */}
         {showPermissionModal && (
           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
             <div

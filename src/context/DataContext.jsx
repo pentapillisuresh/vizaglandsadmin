@@ -35,7 +35,7 @@ export const DataProvider = ({ children }) => {
             role: "customer",
             isVerified: false,
             isActive: true,
-            isDocsVerified: true,
+            isDocsVerified: false,
             aadharDoc:
               "https://images.pexels.com/photos/6863332/pexels-photo-6863332.jpeg?auto=compress&cs=tinysrgb&w=400",
             proofDoc:
@@ -79,7 +79,7 @@ export const DataProvider = ({ children }) => {
             role: "agent",
             isVerified: false,
             isActive: true,
-            isDocsVerified: true,
+            isDocsVerified: false,
             aadharDoc:
               "https://images.pexels.com/photos/6863332/pexels-photo-6863332.jpeg?auto=compress&cs=tinysrgb&w=400",
             proofDoc:
@@ -123,7 +123,7 @@ export const DataProvider = ({ children }) => {
             role: "builder",
             isVerified: false,
             isActive: true,
-            isDocsVerified: true,
+            isDocsVerified: false,
             aadharDoc:
               "https://images.pexels.com/photos/6863332/pexels-photo-6863332.jpeg?auto=compress&cs=tinysrgb&w=400",
             proofDoc:
@@ -370,7 +370,6 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  // ✅ NEW: Update document verification (approve/reject)
   const updateDocsVerification = (id, userType, isDocsVerified) => {
     if (userType === "customer") {
       setUsers((prev) =>
@@ -387,6 +386,34 @@ export const DataProvider = ({ children }) => {
     }
   };
 
+  const addProperty = (property) => {
+    const newProperty = {
+      ...property,
+      id: `prop${Date.now()}`,
+      status: "pending",
+      viewsCount: 0,
+      isFeatured: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setProperties((prev) => [newProperty, ...prev]);
+    return newProperty.id;
+  };
+
+  const updateProperty = (id, updatedData) => {
+    setProperties((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? { ...p, ...updatedData, updatedAt: new Date().toISOString() }
+          : p
+      )
+    );
+  };
+
+  const deleteProperty = (id) => {
+    setProperties((prev) => prev.filter((p) => p.id !== id));
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -396,7 +423,10 @@ export const DataProvider = ({ children }) => {
         properties,
         updatePropertyStatus,
         updatePropertyPermission,
-        updateDocsVerification, // ✅ added here
+        updateDocsVerification,
+        addProperty,
+        updateProperty,
+        deleteProperty,
       }}
     >
       {children}
