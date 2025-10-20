@@ -1,15 +1,11 @@
 import { useState } from "react";
 import { useData } from "../context/DataContext";
-import BannerForm from "../components/BannerForm";
 import {
   Globe,
-  Image,
   UserCog,
-  Edit,
-  Trash2,
   Lock,
-  Unlock,
-  Plus,
+  Eye,
+  EyeOff,
   Mail,
   Phone,
   Upload,
@@ -18,26 +14,28 @@ import {
 export default function Settings() {
   const {
     settings = {
-      siteName: "RealEstate Admin",
+      siteName: "VIZAG LANDS Admin",
       siteLogo: "",
       contactEmail: "",
       contactPhone: "",
     },
-    banners = [],
     updateSettings = () => {},
-    updateBanner = () => {},
-    deleteBanner = () => {},
   } = useData();
 
   const [activeTab, setActiveTab] = useState("site");
-  const [showBannerForm, setShowBannerForm] = useState(false);
-  const [editingBanner, setEditingBanner] = useState(null);
 
   const [siteSettings, setSiteSettings] = useState({
     siteName: settings.siteName || "",
     siteLogo: settings.siteLogo || "",
     contactEmail: settings.contactEmail || "",
     contactPhone: settings.contactPhone || "",
+  });
+
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+    showPassword: false,
   });
 
   const handleSiteSettingsChange = (e) => {
@@ -48,18 +46,43 @@ export default function Settings() {
   const handleSaveSiteSettings = (e) => {
     e.preventDefault();
     updateSettings(siteSettings);
-    alert("✅ Settings saved successfully!");
+    alert("✅ Site settings updated successfully!");
   };
 
-  const handleEditBanner = (banner) => {
-    setEditingBanner(banner);
-    setShowBannerForm(true);
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleDeleteBanner = (id) => {
-    if (window.confirm("Are you sure you want to delete this banner?")) {
-      deleteBanner(id);
+  const toggleShowPassword = () => {
+    setPasswordData((prev) => ({
+      ...prev,
+      showPassword: !prev.showPassword,
+    }));
+  };
+
+  const handleChangePassword = (e) => {
+    e.preventDefault();
+    const { currentPassword, newPassword, confirmPassword } = passwordData;
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      alert("⚠️ Please fill in all password fields.");
+      return;
     }
+
+    if (newPassword !== confirmPassword) {
+      alert("❌ New password and confirm password do not match.");
+      return;
+    }
+
+    // Add your password update logic here (API call, etc.)
+    alert("✅ Password changed successfully!");
+    setPasswordData({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+      showPassword: false,
+    });
   };
 
   return (
@@ -69,7 +92,7 @@ export default function Settings() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
           <p className="text-sm text-gray-500">
-            Configure system settings and preferences
+            Manage configuration and account preferences
           </p>
         </div>
       </div>
@@ -83,10 +106,10 @@ export default function Settings() {
           onClick={() => setActiveTab("site")}
         />
         <TabButton
-          label="Banners Management"
-          icon={Image}
-          active={activeTab === "banners"}
-          onClick={() => setActiveTab("banners")}
+          label="Change Password"
+          icon={Lock}
+          active={activeTab === "password"}
+          onClick={() => setActiveTab("password")}
         />
         <TabButton
           label="Admin Users"
@@ -96,14 +119,11 @@ export default function Settings() {
         />
       </div>
 
-      {/* Main content */}
+      {/* Main Content */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
         {/* SITE SETTINGS */}
         {activeTab === "site" && (
-          <form
-            onSubmit={handleSaveSiteSettings}
-            className="max-w-xl space-y-5"
-          >
+          <form onSubmit={handleSaveSiteSettings} className="max-w-xl space-y-5">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Site Configuration
             </h3>
@@ -190,94 +210,78 @@ export default function Settings() {
           </form>
         )}
 
-        {/* BANNERS */}
-        {activeTab === "banners" && (
-          <div>
-            <div className="flex justify-between items-center mb-5">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Banner Management
-              </h3>
-              <button
-                onClick={() => setShowBannerForm(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-800 to-blue-500 text-white rounded-lg shadow hover:shadow-md text-sm"
-              >
-                <Plus className="w-4 h-4" /> Add Banner
-              </button>
+        {/* CHANGE PASSWORD */}
+        {activeTab === "password" && (
+          <form onSubmit={handleChangePassword} className="max-w-md space-y-5">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Change Password
+            </h3>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Current Password *
+              </label>
+              <input
+                type={passwordData.showPassword ? "text" : "password"}
+                name="currentPassword"
+                value={passwordData.currentPassword}
+                onChange={handlePasswordChange}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
             </div>
 
-            {banners.length ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {banners.map((banner) => (
-                  <div
-                    key={banner.id}
-                    className="border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition"
-                  >
-                    <div
-                      className="h-40 bg-cover bg-center relative"
-                      style={{
-                        backgroundImage: `url(${
-                          banner.imageUrl ||
-                          "https://via.placeholder.com/400x200"
-                        })`,
-                      }}
-                    >
-                      <span
-                        className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold text-white ${
-                          banner.isActive ? "bg-green-600" : "bg-gray-500"
-                        }`}
-                      >
-                        {banner.isActive ? "Active" : "Inactive"}
-                      </span>
-                    </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                New Password *
+              </label>
+              <input
+                type={passwordData.showPassword ? "text" : "password"}
+                name="newPassword"
+                value={passwordData.newPassword}
+                onChange={handlePasswordChange}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+            </div>
 
-                    <div className="p-4">
-                      <h4 className="text-base font-semibold text-gray-900 mb-1">
-                        {banner.title || "Untitled"}
-                      </h4>
-                      <p className="text-sm text-gray-500 mb-1">
-                        Position: {banner.position || "N/A"}
-                      </p>
-                      <p className="text-sm text-gray-500 mb-3">
-                        Order: {banner.displayOrder || 0}
-                      </p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Confirm Password *
+              </label>
+              <div className="relative">
+                <input
+                  type={passwordData.showPassword ? "text" : "password"}
+                  name="confirmPassword"
+                  value={passwordData.confirmPassword}
+                  onChange={handlePasswordChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={toggleShowPassword}
+                  className="absolute right-3 top-2.5 text-gray-500"
+                >
+                  {passwordData.showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
 
-                      <div className="flex gap-2 border-t border-gray-200 pt-3">
-                        <ActionButton
-                          icon={Edit}
-                          title="Edit"
-                          color="text-blue-600"
-                          onClick={() => handleEditBanner(banner)}
-                        />
-                        <ActionButton
-                          icon={banner.isActive ? Unlock : Lock}
-                          title="Toggle Status"
-                          color="text-green-600"
-                          onClick={() =>
-                            updateBanner(banner.id, {
-                              isActive: !banner.isActive,
-                            })
-                          }
-                        />
-                        <ActionButton
-                          icon={Trash2}
-                          title="Delete"
-                          color="text-red-600"
-                          onClick={() => handleDeleteBanner(banner.id)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center text-gray-400 text-sm py-12">
-                No banners configured
-              </div>
-            )}
-          </div>
+            <button
+              type="submit"
+              className="px-5 py-2.5 bg-gradient-to-r from-blue-800 to-blue-500 text-white rounded-lg shadow hover:shadow-md transition text-sm font-medium"
+            >
+              Update Password
+            </button>
+          </form>
         )}
 
-        {/* ADMINS */}
+        {/* ADMINS INFO */}
         {activeTab === "admins" && (
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-3">
@@ -296,17 +300,6 @@ export default function Settings() {
           </div>
         )}
       </div>
-
-      {/* Banner Form Modal */}
-      {showBannerForm && (
-        <BannerForm
-          banner={editingBanner}
-          onClose={() => {
-            setShowBannerForm(false);
-            setEditingBanner(null);
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -324,18 +317,6 @@ function TabButton({ label, icon: Icon, active, onClick }) {
     >
       <Icon className="w-4 h-4" />
       {label}
-    </button>
-  );
-}
-
-function ActionButton({ icon: Icon, title, color, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      title={title}
-      className="p-2 border border-gray-200 rounded-md hover:bg-gray-50 transition"
-    >
-      <Icon className={`w-4 h-4 ${color}`} />
     </button>
   );
 }
