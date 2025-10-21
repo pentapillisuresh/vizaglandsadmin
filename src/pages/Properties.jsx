@@ -1,9 +1,32 @@
 import { useState } from "react";
 import { useData } from "../context/DataContext";
-import { Search, Home, CheckCircle, XCircle, Clock, Eye, IndianRupee, MapPin, Plus, Edit, Trash2, Heart } from "lucide-react";
+import PropertyForm from "../components/PropertyForm";
+import {
+  Search,
+  Home,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Eye,
+  IndianRupee,
+  MapPin,
+  Plus,
+  Edit,
+  Trash2,
+  Heart,
+} from "lucide-react";
 
 export default function Properties() {
-  const { properties, updatePropertyStatus, addProperty, updateProperty, deleteProperty, users, agents, builders } = useData();
+  const {
+    properties,
+    updatePropertyStatus,
+    addProperty,
+    updateProperty,
+    deleteProperty,
+    users,
+    agents,
+    builders,
+  } = useData();
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -12,21 +35,6 @@ export default function Properties() {
   const [wishlistedProperties, setWishlistedProperties] = useState({});
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    propertyType: "residential",
-    propertySubtype: "apartment",
-    listingType: "sell",
-    price: "",
-    city: "",
-    locality: "",
-    subLocality: "",
-    facing: "north",
-    photos: ["https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg"],
-    postedBy: "customer",
-    userId: "user1",
-  });
 
   const allUsers = [...users, ...agents, ...builders];
 
@@ -44,9 +52,9 @@ export default function Properties() {
 
   const handleWishlistClick = (propertyId, propertyStatus) => {
     if (propertyStatus === "approved") {
-      setWishlistedProperties(prev => ({
+      setWishlistedProperties((prev) => ({
         ...prev,
-        [propertyId]: !prev[propertyId]
+        [propertyId]: !prev[propertyId],
       }));
 
       if (!wishlistedProperties[propertyId]) {
@@ -72,76 +80,31 @@ export default function Properties() {
   };
 
   const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this property? This action cannot be undone.")) {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this property? This action cannot be undone."
+      )
+    ) {
       deleteProperty(id);
     }
   };
 
-  const handleAdd = () => {
-    if (!formData.title || !formData.price || !formData.city) {
-      alert("Please fill in all required fields");
-      return;
-    }
-    addProperty({
-      ...formData,
-      price: parseInt(formData.price),
-    });
+  const handleAddProperty = (formData) => {
+    addProperty(formData);
     setShowAddModal(false);
-    resetForm();
     alert("Property added successfully!");
   };
 
-  const handleEdit = () => {
-    if (!formData.title || !formData.price || !formData.city) {
-      alert("Please fill in all required fields");
-      return;
-    }
-    updateProperty(editingProperty.id, {
-      ...formData,
-      price: parseInt(formData.price),
-    });
+  const handleUpdateProperty = (formData) => {
+    updateProperty(editingProperty.id, formData);
     setShowEditModal(false);
     setEditingProperty(null);
-    resetForm();
     alert("Property updated successfully!");
   };
 
   const openEditModal = (property) => {
     setEditingProperty(property);
-    setFormData({
-      title: property.title,
-      description: property.description,
-      propertyType: property.propertyType,
-      propertySubtype: property.propertySubtype,
-      listingType: property.listingType,
-      price: property.price.toString(),
-      city: property.city,
-      locality: property.locality,
-      subLocality: property.subLocality,
-      facing: property.facing,
-      photos: property.photos,
-      postedBy: property.postedBy,
-      userId: property.userId,
-    });
     setShowEditModal(true);
-  };
-
-  const resetForm = () => {
-    setFormData({
-      title: "",
-      description: "",
-      propertyType: "residential",
-      propertySubtype: "apartment",
-      listingType: "sell",
-      price: "",
-      city: "",
-      locality: "",
-      subLocality: "",
-      facing: "north",
-      photos: ["https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg"],
-      postedBy: "customer",
-      userId: "user1",
-    });
   };
 
   const getStatusColor = (status) => {
@@ -171,180 +134,9 @@ export default function Properties() {
   };
 
   const getOwnerName = (userId) => {
-    const user = allUsers.find(u => u.id === userId);
+    const user = allUsers.find((u) => u.id === userId);
     return user ? user.fullName : "Unknown";
   };
-
-  const PropertyForm = ({ onSubmit, onCancel, submitText }) => (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
-          <input
-            type="text"
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-            placeholder="Enter property title"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Price *</label>
-          <input
-            type="number"
-            value={formData.price}
-            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-            placeholder="Enter price"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-        <textarea
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-          rows="3"
-          placeholder="Enter property description"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Property Type</label>
-          <select
-            value={formData.propertyType}
-            onChange={(e) => setFormData({ ...formData, propertyType: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-          >
-            <option value="residential">Residential</option>
-            <option value="commercial">Commercial</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Property Subtype</label>
-          <select
-            value={formData.propertySubtype}
-            onChange={(e) => setFormData({ ...formData, propertySubtype: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-          >
-            <option value="apartment">Apartment</option>
-            <option value="villa">Villa</option>
-            <option value="house">House</option>
-            <option value="penthouse">Penthouse</option>
-            <option value="office">Office</option>
-            <option value="shop">Shop</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Listing Type</label>
-          <select
-            value={formData.listingType}
-            onChange={(e) => setFormData({ ...formData, listingType: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-          >
-            <option value="sell">Sell</option>
-            <option value="rent">Rent</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
-          <input
-            type="text"
-            value={formData.city}
-            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-            placeholder="Enter city"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Locality</label>
-          <input
-            type="text"
-            value={formData.locality}
-            onChange={(e) => setFormData({ ...formData, locality: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-            placeholder="Enter locality"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Sub Locality</label>
-          <input
-            type="text"
-            value={formData.subLocality}
-            onChange={(e) => setFormData({ ...formData, subLocality: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-            placeholder="Enter sub locality"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Facing</label>
-          <select
-            value={formData.facing}
-            onChange={(e) => setFormData({ ...formData, facing: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-          >
-            <option value="north">North</option>
-            <option value="south">South</option>
-            <option value="east">East</option>
-            <option value="west">West</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Posted By</label>
-          <select
-            value={formData.postedBy}
-            onChange={(e) => setFormData({ ...formData, postedBy: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-          >
-            <option value="customer">Customer</option>
-            <option value="agent">Agent</option>
-            <option value="builder">Builder</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Owner</label>
-          <select
-            value={formData.userId}
-            onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-          >
-            {allUsers.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.fullName} ({user.role})
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="flex gap-3 mt-6">
-        <button
-          onClick={onCancel}
-          className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={onSubmit}
-          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
-        >
-          {submitText}
-        </button>
-      </div>
-    </div>
-  );
 
   return (
     <div className="p-6">
@@ -364,15 +156,16 @@ export default function Properties() {
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
-          <p className="text-sm text-gray-500">Review and approve property listings</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Property Management
+          </h1>
+          <p className="text-sm text-gray-500">
+            Review and approve property listings
+          </p>
         </div>
         <button
-          onClick={() => {
-            resetForm();
-            setShowAddModal(true);
-          }}
-          className="mt-4 sm:mt-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center gap-2"
+          onClick={() => setShowAddModal(true)}
+          className="mt-4 sm:mt-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center gap-2 shadow-sm"
         >
           <Plus className="w-5 h-5" />
           Add Property
@@ -428,7 +221,9 @@ export default function Properties() {
                 />
                 <div className="absolute top-3 right-3 flex items-center gap-2">
                   <button
-                    onClick={() => handleWishlistClick(property.id, property.status)}
+                    onClick={() =>
+                      handleWishlistClick(property.id, property.status)
+                    }
                     className={`p-2 rounded-full backdrop-blur-sm transition-all duration-300 ${
                       wishlistedProperties[property.id]
                         ? "bg-red-500 hover:bg-red-600 scale-110"
@@ -484,8 +279,18 @@ export default function Properties() {
                 </div>
 
                 <div className="text-xs text-gray-500 mb-3">
-                  <p>Posted by: <span className="font-medium text-gray-700 capitalize">{property.postedBy}</span></p>
-                  <p>Owner: <span className="font-medium text-gray-700">{getOwnerName(property.userId)}</span></p>
+                  <p>
+                    Posted by:{" "}
+                    <span className="font-medium text-gray-700 capitalize">
+                      {property.postedBy}
+                    </span>
+                  </p>
+                  <p>
+                    Owner:{" "}
+                    <span className="font-medium text-gray-700">
+                      {getOwnerName(property.userId)}
+                    </span>
+                  </p>
                 </div>
 
                 <div className="flex gap-2">
@@ -528,40 +333,64 @@ export default function Properties() {
       ) : (
         <div className="text-center py-16 bg-white rounded-xl shadow-sm border border-gray-200">
           <Home className="w-14 h-14 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-800 mb-1">No properties found</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">
+            No properties found
+          </h3>
           <p className="text-sm text-gray-500">Try adjusting your filters</p>
         </div>
       )}
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-auto p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Add New Property</h2>
-            <PropertyForm
-              onSubmit={handleAdd}
-              onCancel={() => {
-                setShowAddModal(false);
-                resetForm();
-              }}
-              submitText="Add Property"
-            />
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
+              <h2 className="text-xl font-bold text-gray-900">
+                Add New Property
+              </h2>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition"
+              >
+                <Plus className="w-5 h-5 text-gray-500 rotate-45" />
+              </button>
+            </div>
+            <div className="p-6">
+              <PropertyForm
+                onSubmit={handleAddProperty}
+                onCancel={() => setShowAddModal(false)}
+                allUsers={allUsers}
+              />
+            </div>
           </div>
         </div>
       )}
 
-      {showEditModal && (
+      {showEditModal && editingProperty && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-auto p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Edit Property</h2>
-            <PropertyForm
-              onSubmit={handleEdit}
-              onCancel={() => {
-                setShowEditModal(false);
-                setEditingProperty(null);
-                resetForm();
-              }}
-              submitText="Update Property"
-            />
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
+              <h2 className="text-xl font-bold text-gray-900">Edit Property</h2>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingProperty(null);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition"
+              >
+                <Plus className="w-5 h-5 text-gray-500 rotate-45" />
+              </button>
+            </div>
+            <div className="p-6">
+              <PropertyForm
+                initialData={editingProperty}
+                onSubmit={handleUpdateProperty}
+                onCancel={() => {
+                  setShowEditModal(false);
+                  setEditingProperty(null);
+                }}
+                allUsers={allUsers}
+              />
+            </div>
           </div>
         </div>
       )}

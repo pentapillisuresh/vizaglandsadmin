@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useData } from "../context/DataContext";
-import { X, Settings, MapPin, IndianRupee, Eye, CheckCircle, XCircle } from "lucide-react";
+import { X, Settings, MapPin, IndianRupee, Eye, CheckCircle, XCircle, Edit } from "lucide-react";
+import PropertyForm from "./PropertyForm";
 
 export default function UserDetails({ user, type, onClose }) {
-  const { properties, updatePropertyPermission, updateDocsVerification, updatePropertyStatus } = useData();
+  const { properties, updatePropertyPermission, updateDocsVerification, updatePropertyStatus, updateProperty } = useData();
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingProperty, setEditingProperty] = useState(null);
   const [permissionData, setPermissionData] = useState({
     canAddProperty: user.canAddProperty,
     propertyLimit: user.propertyLimit,
@@ -45,6 +48,18 @@ export default function UserDetails({ user, type, onClose }) {
     if (window.confirm("Are you sure you want to reject this property?")) {
       updatePropertyStatus(propertyId, "rejected");
     }
+  };
+
+  const handleEditProperty = (property) => {
+    setEditingProperty(property);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateProperty = (updatedData) => {
+    updateProperty(editingProperty.id, updatedData);
+    setShowEditModal(false);
+    setEditingProperty(null);
+    alert("Property updated successfully");
   };
 
   const getStatusColor = (status) => {
@@ -271,24 +286,33 @@ export default function UserDetails({ user, type, onClose }) {
                         </div>
                       </div>
 
-                      {property.status === "pending" && (
-                        <div className="flex gap-2 mt-3 pt-3 border-t">
-                          <button
-                            onClick={() => handleApproveProperty(property.id)}
-                            className="flex-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-xs flex items-center justify-center gap-1"
-                          >
-                            <CheckCircle className="w-3 h-3" />
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleRejectProperty(property.id)}
-                            className="flex-1 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-xs flex items-center justify-center gap-1"
-                          >
-                            <XCircle className="w-3 h-3" />
-                            Reject
-                          </button>
-                        </div>
-                      )}
+                      <div className="flex gap-2 mt-3 pt-3 border-t">
+                        <button
+                          onClick={() => handleEditProperty(property)}
+                          className="flex-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-xs flex items-center justify-center gap-1"
+                        >
+                          <Edit className="w-3 h-3" />
+                          Edit
+                        </button>
+                        {property.status === "pending" && (
+                          <>
+                            <button
+                              onClick={() => handleApproveProperty(property.id)}
+                              className="flex-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-xs flex items-center justify-center gap-1"
+                            >
+                              <CheckCircle className="w-3 h-3" />
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleRejectProperty(property.id)}
+                              className="flex-1 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-xs flex items-center justify-center gap-1"
+                            >
+                              <XCircle className="w-3 h-3" />
+                              Reject
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -359,6 +383,37 @@ export default function UserDetails({ user, type, onClose }) {
                   Update
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {showEditModal && editingProperty && (
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 overflow-auto">
+            <div
+              className="bg-white rounded-lg p-6 w-full max-w-3xl my-8 max-h-[85vh] overflow-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4 sticky top-0 bg-white pb-2 border-b">
+                <h3 className="text-lg font-bold text-gray-900">Edit Property</h3>
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingProperty(null);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+              <PropertyForm
+                initialData={editingProperty}
+                onSubmit={handleUpdateProperty}
+                onCancel={() => {
+                  setShowEditModal(false);
+                  setEditingProperty(null);
+                }}
+                allUsers={[]}
+              />
             </div>
           </div>
         )}
