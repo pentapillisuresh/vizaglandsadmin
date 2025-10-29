@@ -31,32 +31,22 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/" element={<Dashboard />} />
+          <Route path="properties" element={<Properties />} />
+          <Route path="users" element={<Users />} />
+          <Route path="agents" element={<Agents />} />
+          <Route path="builders" element={<Builders />} />
 
-          <Route
-            path="/"
-            element={
-              <PrivateRoute>
-                <Layout />
-              </PrivateRoute>
-            }
-          >
-            <Route index element={<Dashboard />} />
-            <Route path="properties" element={<Properties />} />
-            <Route path="users" element={<Users />} />
-            <Route path="agents" element={<Agents />} />
-            <Route path="builders" element={<Builders />} />
-
-            <Route path="schedule" element={<Schedule />} />
-            <Route path="leads" element={<Leads />} />
-            <Route path="buy-development" element={<BuyDevelopment />} />
-            <Route path="content" element={<ContentManager />} />
-            {/* <Route path="payments" element={<Payments />} /> */}
-            {/* <Route path="reports" element={<Reports />} /> */}
-            <Route path="settings" element={<Settings />} />
-          </Route>
-        </Routes>
-      </Router>
-    </DataProvider>
+          <Route path="schedule" element={<Schedule />} />
+          <Route path="leads" element={<Leads />} />
+          <Route path="buy-development" element={<BuyDevelopment />} />
+          <Route path="content" element={<ContentManager />} />
+          {/* <Route path="payments" element={<Payments />} /> */}
+          {/* <Route path="reports" element={<Reports />} /> */}
+          <Route path="settings" element={<Settings />} />
+      </Routes>
+    </Router>
+    </DataProvider >
   );
 }
 

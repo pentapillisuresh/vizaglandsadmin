@@ -1,32 +1,12 @@
-import { useState } from "react";
-import { useData } from "../context/DataContext";
+import { useState, useEffect } from "react";
+import { Search, Home, CheckCircle, XCircle, Clock, Eye, IndianRupee, MapPin, Plus, Edit, Trash2, Heart, HomeIcon } from "lucide-react";
 import PropertyForm from "../components/PropertyForm";
-import {
-  Search,
-  Home,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Eye,
-  IndianRupee,
-  MapPin,
-  Plus,
-  Edit,
-  Trash2,
-  Heart,
-} from "lucide-react";
+import ApiService from "../hooks/ApiService";
 
 export default function Properties() {
-  const {
-    properties,
-    updatePropertyStatus,
-    addProperty,
-    updateProperty,
-    deleteProperty,
-    users,
-    agents,
-    builders,
-  } = useData();
+  const [properties, setProperties] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -36,70 +16,202 @@ export default function Properties() {
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
 
-  const allUsers = [...users, ...agents, ...builders];
+  // ✅ Fetch properties from API
+  const fetchProperties = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("http://localhost:3000/api/properties");
+      if (!res.ok) throw new Error("Failed to fetch properties");
+      const data = await res.json();
+      setProperties(data.properties || []);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load properties. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    fetchProperties();
+  }, []);
 
-  const filteredProperties = properties.filter((property) => {
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  // ✅ Local filtering logic
+  const filteredProperties = properties?.filter((property) => {
     const matchesSearch =
-      property.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.city.toLowerCase().includes(searchTerm.toLowerCase());
+      property.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      property.address?.city?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter =
       filter === "all" ||
       (filter === "pending" && property.status === "pending") ||
       (filter === "approved" && property.status === "approved") ||
-      (filter === "rejected" && property.status === "rejected");
+      (filter === "rejected" && property.status === "rejected") ||
+      (filter === "verified" && property.status === "verified");
     return matchesSearch && matchesFilter;
   });
 
-  const handleWishlistClick = (propertyId, propertyStatus) => {
-    if (propertyStatus === "approved") {
+  const handleWishlistClick = async (propertyId, propertyStatus, isActive) => {
+    if (propertyStatus === "verified" || propertyStatus === "approved") {
+      // Toggle wishlist state locally
       setWishlistedProperties((prev) => ({
         ...prev,
         [propertyId]: !prev[propertyId],
       }));
+    }
 
-      if (!wishlistedProperties[propertyId]) {
-        setNotificationMessage("Property is Live");
-        setShowNotification(true);
-        setTimeout(() => {
-          setShowNotification(false);
-        }, 3000);
+    try {
+      const adminToken = localStorage.getItem("token");
+      if (!adminToken) {
+        alert("Admin token not found. Please log in again.");
+        return;
       }
+
+      // Make API request
+      const response = await ApiService.put(
+        `/properties/${propertyId}`,
+        { isActive },
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (response) {
+        // Show notification when property is made live
+        if (!wishlistedProperties[propertyId]) {
+          setNotificationMessage("Property is Live");
+          setShowNotification(true);
+          setTimeout(() => setShowNotification(false), 3000);
+        }
+        fetchProperties()
+        // Optional: reload or refetch data
+        // window.location.reload(); // reloads the current page
+        // OR ideally: refetch data instead of reloading
+        // fetchProperties();
+
+        console.log("Property updated successfully!");
+      } else {
+        console.error("Error updating property:", response?.message);
+        alert("Failed to update property. Please try again.");
+      }
+    } catch (err) {
+      console.error("Error:", err);
+      alert(err.message || "An unexpected error occurred.");
     }
   };
 
-  const handleApprove = (id) => {
-    if (window.confirm("Are you sure you want to approve this property?")) {
-      updatePropertyStatus(id, "approved");
-    }
-  };
-
-  const handleReject = (id) => {
-    if (window.confirm("Are you sure you want to reject this property?")) {
-      updatePropertyStatus(id, "rejected");
-    }
-  };
-
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (
       window.confirm(
         "Are you sure you want to delete this property? This action cannot be undone."
       )
     ) {
-      deleteProperty(id);
+      try {
+        await fetch(`http://localhost:3000/api/properties/${id}`, {
+          method: "DELETE",
+        });
+        setProperties((prev) => prev.filter((p) => p.id !== id));
+        alert("Property deleted successfully!");
+      } catch (err) {
+        alert("Failed to delete property.");
+      }
     }
   };
 
-  const handleAddProperty = (formData) => {
-    addProperty(formData);
-    setShowAddModal(false);
-    alert("Property added successfully!");
+  const handleAddProperty = async (formData) => {
+    const adminToken = localStorage.getItem("token");
+    const adminClientData = localStorage.getItem("adminClientData");
+    formData.clientId = adminClientData.id;
+    try {
+      const res = await ApiService.post("/properties", formData, {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = res.property;
+
+      if (!res || res.status !== 200) {
+        throw new Error(data?.message || "Failed to add property");
+      }
+
+      setShowEditModal(false);
+      alert("Property added successfully!");
+    } catch (err) {
+      console.error("Error adding property:", err);
+      alert(err.message || "An error occurred while adding the property.");
+    }
   };
 
-  const handleUpdateProperty = (formData) => {
-    updateProperty(editingProperty.id, formData);
-    setShowEditModal(false);
-    setEditingProperty(null);
-    alert("Property updated successfully!");
+  const handleUpdateProperty = async (formData) => {
+    console.log("from::", formData)
+
+    try {
+      const adminToken = localStorage.getItem("token");
+
+      const response = await ApiService.put(`/properties/${formData.id}`, formData,
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            'Content-Type': 'application/json'
+          }
+        },
+      )
+
+      if (response) {
+        setShowEditModal(false);
+        navigate('./properties')
+      } else {
+        console.log("rrr::", response?.message)
+      }
+
+      setProperties((prev) =>
+        prev.map((p) => (p.id === editingProperty.id ? response.property : p))
+      );
+      setShowEditModal(false);
+      setEditingProperty(null);
+      alert("Property updated successfully!");
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleStatus = async (id, status) => {
+    try {
+      const adminToken = localStorage.getItem("token");
+
+      const response = await ApiService.put(`/properties/${id}`, { status },
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            'Content-Type': 'application/json'
+          }
+        },
+      )
+
+      if (response) {
+        navigate('./properties')
+      } else {
+        console.log("rrr::", response?.message)
+      }
+
+      setProperties((prev) =>
+        prev.map((p) => (p.id === editingProperty.id ? data.property : p))
+      );
+      alert("Property updated successfully!");
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   const openEditModal = (property) => {
@@ -109,6 +221,7 @@ export default function Properties() {
 
   const getStatusColor = (status) => {
     switch (status) {
+      case "verified":
       case "approved":
         return "bg-green-100 text-green-700";
       case "pending":
@@ -122,6 +235,7 @@ export default function Properties() {
 
   const getStatusIcon = (status) => {
     switch (status) {
+      case "verified":
       case "approved":
         return <CheckCircle className="w-4 h-4" />;
       case "pending":
@@ -133,13 +247,21 @@ export default function Properties() {
     }
   };
 
-  const getOwnerName = (userId) => {
-    const user = allUsers.find((u) => u.id === userId);
-    return user ? user.fullName : "Unknown";
-  };
+  if (loading)
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-gray-600 animate-pulse">Loading properties...</p>
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className="text-center text-red-600 font-medium py-10">{error}</div>
+    );
 
   return (
     <div className="p-6">
+      {/* Notification */}
       {showNotification && (
         <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in-down">
           <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-4 rounded-xl shadow-2xl flex items-center gap-3 border border-green-400">
@@ -154,15 +276,24 @@ export default function Properties() {
         </div>
       )}
 
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Property Management
-          </h1>
-          <p className="text-sm text-gray-500">
-            Review and approve property listings
-          </p>
+        <div className="flex items-center space-x-3">
+          <Home
+            size={20}
+            className="w-8 h-8 text-red-500 transition-all duration-300 cursor-pointer"
+          />
+
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Property Management
+            </h1>
+            <p className="text-sm text-gray-500">
+              Review and manage property listings
+            </p>
+          </div>
         </div>
+
         <button
           onClick={() => setShowAddModal(true)}
           className="mt-4 sm:mt-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center gap-2 shadow-sm"
@@ -172,6 +303,7 @@ export default function Properties() {
         </button>
       </div>
 
+      {/* Filters */}
       <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm mb-8">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="relative w-full md:w-96">
@@ -186,23 +318,25 @@ export default function Properties() {
           </div>
 
           <div className="flex gap-2">
-            {["all", "pending", "approved", "rejected"].map((status) => (
-              <button
-                key={status}
-                onClick={() => setFilter(status)}
-                className={`px-4 py-2 text-sm rounded-lg border transition font-medium ${
-                  filter === status
+            {["all", "pending", "approved", "verified", "rejected"].map(
+              (status) => (
+                <button
+                  key={status}
+                  onClick={() => setFilter(status)}
+                  className={`px-4 py-2 text-sm rounded-lg border transition font-medium ${filter === status
                     ? "bg-blue-600 text-white border-blue-600"
                     : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                }`}
-              >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </button>
-            ))}
+                    }`}
+                >
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </button>
+              )
+            )}
           </div>
         </div>
       </div>
 
+      {/* Property Cards */}
       {filteredProperties.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProperties.map((property) => (
@@ -222,20 +356,18 @@ export default function Properties() {
                 <div className="absolute top-3 right-3 flex items-center gap-2">
                   <button
                     onClick={() =>
-                      handleWishlistClick(property.id, property.status)
+                      handleWishlistClick(property.id, property.status, !property.isActive)
                     }
-                    className={`p-2 rounded-full backdrop-blur-sm transition-all duration-300 ${
-                      wishlistedProperties[property.id]
-                        ? "bg-red-500 hover:bg-red-600 scale-110"
-                        : "bg-white/80 hover:bg-white"
-                    }`}
+                    className={`p-2 rounded-full backdrop-blur-sm transition-all duration-300 ${property.isActive
+                      ? "bg-red-500 hover:bg-red-600 scale-110"
+                      : "bg-white/80 hover:bg-white"
+                      }`}
                   >
                     <Heart
-                      className={`w-5 h-5 transition-all duration-300 ${
-                        wishlistedProperties[property.id]
-                          ? "fill-white text-white"
-                          : "text-gray-700 hover:text-red-500"
-                      }`}
+                      className={`w-5 h-5 transition-all duration-300 ${property.isActive
+                        ? "fill-white text-white"
+                        : "text-gray-700 hover:text-red-500"
+                        }`}
                     />
                   </button>
                 </div>
@@ -258,7 +390,7 @@ export default function Properties() {
 
                 <div className="flex items-center text-sm text-gray-600 mb-2">
                   <MapPin className="w-4 h-4 mr-1" />
-                  {property.city}, {property.locality}
+                  {property.address.city}, {property.address.locality}
                 </div>
 
                 <div className="flex items-center justify-between mb-3">
@@ -268,27 +400,33 @@ export default function Properties() {
                   </div>
                   <div className="flex items-center text-sm text-gray-500">
                     <Eye className="w-4 h-4 mr-1" />
-                    {property.viewsCount}
+                    {property.viewCount}
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-gray-500 mb-3 pb-3 border-b border-gray-200">
-                  <span className="capitalize">{property.propertyType}</span>
-                  <span className="capitalize">{property.propertySubtype}</span>
-                  <span className="capitalize">{property.listingType}</span>
+                  <span className="capitalize">{property.category.name}</span>
+                  <span className="capitalize">{property.marketType}</span>
+                  {/* <span className="capitalize">{property.createdAt}</span> */}
                 </div>
 
                 <div className="text-xs text-gray-500 mb-3">
                   <p>
                     Posted by:{" "}
                     <span className="font-medium text-gray-700 capitalize">
-                      {property.postedBy}
+                      {property.client.role}
                     </span>
                   </p>
                   <p>
                     Owner:{" "}
+                    <span className="font-medium text-gray-700 capitalize" >
+                      {property.client?.fullName || "Unknown"}
+                    </span>
+                  </p>
+                  <p>
+                    Created On:{" "}
                     <span className="font-medium text-gray-700">
-                      {getOwnerName(property.userId)}
+                      {formatDate(property.createdAt)}
                     </span>
                   </p>
                 </div>
@@ -297,14 +435,14 @@ export default function Properties() {
                   {property.status === "pending" && (
                     <>
                       <button
-                        onClick={() => handleApprove(property.id)}
+                        onClick={() => handleStatus(property.id, "verified")}
                         className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm flex items-center justify-center gap-1"
                       >
                         <CheckCircle className="w-4 h-4" />
                         Approve
                       </button>
                       <button
-                        onClick={() => handleReject(property.id)}
+                        onClick={() => handleStatus(property.id, "rejected")}
                         className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm flex items-center justify-center gap-1"
                       >
                         <XCircle className="w-4 h-4" />
@@ -340,6 +478,7 @@ export default function Properties() {
         </div>
       )}
 
+      {/* Add/Edit Modals */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-auto">
@@ -358,7 +497,6 @@ export default function Properties() {
               <PropertyForm
                 onSubmit={handleAddProperty}
                 onCancel={() => setShowAddModal(false)}
-                allUsers={allUsers}
               />
             </div>
           </div>
@@ -388,7 +526,6 @@ export default function Properties() {
                   setShowEditModal(false);
                   setEditingProperty(null);
                 }}
-                allUsers={allUsers}
               />
             </div>
           </div>

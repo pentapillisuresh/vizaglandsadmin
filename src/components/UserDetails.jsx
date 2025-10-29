@@ -1,69 +1,77 @@
 import { useState } from "react";
-import { useData } from "../context/DataContext";
-import { X, Settings, MapPin, IndianRupee, Eye, CheckCircle, XCircle, Edit } from "lucide-react";
-import PropertyForm from "./PropertyForm";
+import {X,CheckCircle,XCircle,Settings,MapPin,IndianRupee,Eye,Edit} from "lucide-react";
+import ApiService from "../hooks/ApiService";
 
 export default function UserDetails({ user, type, onClose }) {
-  const { properties, updatePropertyPermission, updateDocsVerification, updatePropertyStatus, updateProperty } = useData();
+  const [isDocsVerified, setIsDocsVerified] = useState(user.isDocsVerified);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingProperty, setEditingProperty] = useState(null);
   const [permissionData, setPermissionData] = useState({
     canAddProperty: user.canAddProperty,
     propertyLimit: user.propertyLimit,
   });
-  const [isDocsVerified, setIsDocsVerified] = useState(user.isDocsVerified);
+  const [editingProperty, setEditingProperty] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
-  const userProperties = properties.filter((p) => p.userId === user.id);
+  const userProperties = user.properties || [];
 
-  const handleUpdatePermission = () => {
-    updatePropertyPermission(
-      user.id,
-      type,
-      permissionData.canAddProperty,
-      permissionData.propertyLimit
-    );
-    setShowPermissionModal(false);
-  };
-
+  // 🔹 Local handlers for toggles (placeholder for real API integration)
   const handleApproveDocs = () => {
     setIsDocsVerified(true);
-    updateDocsVerification(user.id, type, true);
-    alert("Documents approved successfully");
+      const rrr={
+        status:'active',
+        isVerified:true
+      }
+      handleUpdatePermission(rrr)
   };
 
   const handleRejectDocs = () => {
     setIsDocsVerified(false);
-    updateDocsVerification(user.id, type, false);
-    alert("Documents rejected");
+    const rrr={
+      status:'suspended',
+      isVerified:false
+
+    }
+    handleUpdatePermission(rrr)
+};
+
+  const handleUpdatePermission = async (updateData) => {
+    const adminToken = localStorage.getItem('token');
+
+    try {
+      const res = await ApiService.put(`/clients/${user.id}`,
+        updateData, {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          "Content-Type": "application/json"
+        }
+      }
+      );
+      alert("limit updated successfully!");
+      if(res){
+        window.location.reload();
+            }
+    } catch (error) {
+      console.error("Error updating client:", error);
+      alert("Failed to update profile");
+    } 
+    setShowPermissionModal(false);
   };
 
   const handleApproveProperty = (propertyId) => {
     if (window.confirm("Are you sure you want to approve this property?")) {
-      updatePropertyStatus(propertyId, "approved");
+      alert(`Property ${propertyId} approved`);
     }
   };
 
   const handleRejectProperty = (propertyId) => {
     if (window.confirm("Are you sure you want to reject this property?")) {
-      updatePropertyStatus(propertyId, "rejected");
+      alert(`Property ${propertyId} rejected`);
     }
-  };
-
-  const handleEditProperty = (property) => {
-    setEditingProperty(property);
-    setShowEditModal(true);
-  };
-
-  const handleUpdateProperty = (updatedData) => {
-    updateProperty(editingProperty.id, updatedData);
-    setShowEditModal(false);
-    setEditingProperty(null);
-    alert("Property updated successfully");
   };
 
   const getStatusColor = (status) => {
     switch (status) {
+      case "verified":
       case "approved":
         return "bg-green-100 text-green-700";
       case "pending":
@@ -84,38 +92,61 @@ export default function UserDetails({ user, type, onClose }) {
         className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-auto"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">
-            {type === "customer"
-              ? "Customer"
-              : type === "agent"
-              ? "Agent"
-              : "Builder"}{" "}
-            Details
-          </h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition">
+          <h2 className="text-xl font-bold text-gray-900">Owner Details</h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition"
+          >
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
 
         <div className="p-6 space-y-6">
+          {/* 🔹 Personal Info + Account Status */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-gray-50 rounded-lg p-5">
               <h3 className="text-sm font-semibold text-gray-500 uppercase mb-4">
                 Personal Information
               </h3>
               <div className="space-y-3">
+                {user.profilePic && (
+                  <img
+                    src={user.profilePic}
+                    alt={user.fullName}
+                    className="w-20 h-20 rounded-full object-cover mb-3 border"
+                  />
+                )}
                 <div>
                   <p className="text-xs text-gray-500">Full Name</p>
-                  <p className="text-sm font-medium text-gray-900">{user.fullName}</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {user.fullName}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Email</p>
-                  <p className="text-sm font-medium text-gray-900">{user.email}</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {user.email}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Phone</p>
-                  <p className="text-sm font-medium text-gray-900">{user.phone || "N/A"}</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {user.phone || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Company</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {user.companyName || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Address</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {user.address || "N/A"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Joined Date</p>
@@ -126,6 +157,7 @@ export default function UserDetails({ user, type, onClose }) {
               </div>
             </div>
 
+            {/* Account Status */}
             <div className="bg-gray-50 rounded-lg p-5">
               <h3 className="text-sm font-semibold text-gray-500 uppercase mb-4">
                 Account Status
@@ -143,6 +175,7 @@ export default function UserDetails({ user, type, onClose }) {
                     {user.isActive ? "Active" : "Inactive"}
                   </span>
                 </div>
+
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-700">Can Add Property</span>
                   <span
@@ -155,6 +188,7 @@ export default function UserDetails({ user, type, onClose }) {
                     {user.canAddProperty ? "Yes" : "No"}
                   </span>
                 </div>
+
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-700">Property Usage</span>
                   <span className="text-sm font-medium text-gray-900">
@@ -165,6 +199,7 @@ export default function UserDetails({ user, type, onClose }) {
             </div>
           </div>
 
+          {/* 🔹 Document Verification */}
           <div className="bg-gray-50 rounded-lg p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-gray-500 uppercase">
@@ -172,7 +207,9 @@ export default function UserDetails({ user, type, onClose }) {
               </h3>
               <span
                 className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                  isDocsVerified ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                  isDocsVerified
+                    ? "bg-green-100 text-green-700"
+                    : "bg-amber-100 text-amber-700"
                 }`}
               >
                 {isDocsVerified ? "Verified" : "Pending"}
@@ -180,22 +217,20 @@ export default function UserDetails({ user, type, onClose }) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <p className="text-xs text-gray-500 mb-2">Aadhar Document</p>
-                <img
-                  src={user.aadharDoc}
-                  alt="Aadhar Document"
-                  className="w-full h-48 object-cover rounded-lg border"
-                />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-2">Proof Document</p>
-                <img
-                  src={user.proofDoc}
-                  alt="Proof Document"
-                  className="w-full h-48 object-cover rounded-lg border"
-                />
-              </div>
+              {user.kycUploadFile ? (
+                <div>
+                  <p className="text-xs text-gray-500 mb-2">
+                    {user.kycProofName || "KYC Document"}
+                  </p>
+                  <img
+                    src={user.kycUploadFile}
+                    alt="KYC Proof"
+                    className="w-full h-48 object-cover rounded-lg border"
+                  />
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">No KYC file uploaded</p>
+              )}
             </div>
 
             <div className="flex gap-3">
@@ -214,6 +249,7 @@ export default function UserDetails({ user, type, onClose }) {
             </div>
           </div>
 
+          {/* 🔹 Property Permissions */}
           <div className="bg-gray-50 rounded-lg p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-gray-500 uppercase">
@@ -230,15 +266,20 @@ export default function UserDetails({ user, type, onClose }) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-xs text-gray-500">Current Limit</p>
-                <p className="text-2xl font-bold text-gray-900">{user.propertyLimit}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {user.propertyLimit}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Properties Added</p>
-                <p className="text-2xl font-bold text-gray-900">{user.propertiesAdded}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {user.propertiesAdded}
+                </p>
               </div>
             </div>
           </div>
 
+          {/* 🔹 Properties */}
           <div>
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-4">
               Properties ({userProperties.length})
@@ -273,38 +314,35 @@ export default function UserDetails({ user, type, onClose }) {
                       </div>
                       <div className="flex items-center text-xs text-gray-600 mb-2">
                         <MapPin className="w-3 h-3 mr-1" />
-                        {property.city}
+                        {property.address || "No address info"}
                       </div>
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center text-sm font-semibold text-blue-700">
                           <IndianRupee className="w-4 h-4" />
-                          {property.price?.toLocaleString("en-IN")}
+                          {parseFloat(property.price).toLocaleString("en-IN")}
                         </div>
                         <div className="flex items-center text-xs text-gray-500">
                           <Eye className="w-3 h-3 mr-1" />
-                          {property.viewsCount}
+                          {property.viewCount || 0}
                         </div>
                       </div>
 
                       <div className="flex gap-2 mt-3 pt-3 border-t">
-                        <button
-                          onClick={() => handleEditProperty(property)}
-                          className="flex-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-xs flex items-center justify-center gap-1"
-                        >
-                          <Edit className="w-3 h-3" />
-                          Edit
-                        </button>
                         {property.status === "pending" && (
                           <>
                             <button
-                              onClick={() => handleApproveProperty(property.id)}
+                              onClick={() =>
+                                handleApproveProperty(property.id)
+                              }
                               className="flex-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-xs flex items-center justify-center gap-1"
                             >
                               <CheckCircle className="w-3 h-3" />
                               Approve
                             </button>
                             <button
-                              onClick={() => handleRejectProperty(property.id)}
+                              onClick={() =>
+                                handleRejectProperty(property.id)
+                              }
                               className="flex-1 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-xs flex items-center justify-center gap-1"
                             >
                               <XCircle className="w-3 h-3" />
@@ -325,13 +363,16 @@ export default function UserDetails({ user, type, onClose }) {
           </div>
         </div>
 
+        {/* 🔹 Manage Property Limit Modal */}
         {showPermissionModal && (
           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
             <div
               className="bg-white rounded-lg p-6 w-full max-w-md"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Manage Property Limit</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-4">
+                Manage Property Limit
+              </h3>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -377,43 +418,17 @@ export default function UserDetails({ user, type, onClose }) {
                   Cancel
                 </button>
                 <button
-                  onClick={handleUpdatePermission}
+                  onClick={()=>{
+                    const rrr={
+                      postLimit:permissionData.propertyLimit
+                    }
+                    handleUpdatePermission(rrr)
+                  }}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
                 >
                   Update
                 </button>
               </div>
-            </div>
-          </div>
-        )}
-
-        {showEditModal && editingProperty && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 overflow-auto">
-            <div
-              className="bg-white rounded-lg p-6 w-full max-w-3xl my-8 max-h-[85vh] overflow-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-4 sticky top-0 bg-white pb-2 border-b">
-                <h3 className="text-lg font-bold text-gray-900">Edit Property</h3>
-                <button
-                  onClick={() => {
-                    setShowEditModal(false);
-                    setEditingProperty(null);
-                  }}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition"
-                >
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
-              <PropertyForm
-                initialData={editingProperty}
-                onSubmit={handleUpdateProperty}
-                onCancel={() => {
-                  setShowEditModal(false);
-                  setEditingProperty(null);
-                }}
-                allUsers={[]}
-              />
             </div>
           </div>
         )}
