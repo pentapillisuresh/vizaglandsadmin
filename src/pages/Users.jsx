@@ -34,7 +34,7 @@ export default function Users() {
               'Content-Type': 'application/json'
             }
           }
-        );;
+        );
         if (!res) throw new Error("Failed to fetch owners");
         
 

@@ -331,7 +331,7 @@ export default function PropertyForm({ initialData = null, onSubmit, onCancel, a
           <input
             type="text"
             placeholder="Video URLs (comma-separated)"
-            value={formData.videos.join(", ")}
+            value={formData?.videos?.join(", ")}
             onChange={(e) => handleChange("videos", e.target.value.split(","))}
             className="border rounded-lg px-3 py-2 text-sm"
           />

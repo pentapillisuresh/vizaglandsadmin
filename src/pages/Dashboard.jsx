@@ -2,12 +2,18 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Users, UserCog, Building2, Home, Clock, CheckCircle, XCircle, Eye, MessageSquare } from "lucide-react";
 import ApiService from "../hooks/ApiService";
+import LeadItem from "../components/LeadItem";
+import LeadDetailModal from "../components/LeadDetailModal";
 
 export default function Dashboard() {
   const navigate = useNavigate();
 
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedLead, setSelectedLead] = useState(null);
+  const [showProperty, setShowProperty] = useState(true);
+  const [showLeads, setShowLeads] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -47,7 +53,7 @@ export default function Dashboard() {
           }
         );;
         if (!res) throw new Error("Failed to fetch owners");
-        
+
 
         if (Array.isArray(res.clients)) {
           // Normalize the data to match table expectations
@@ -60,10 +66,10 @@ export default function Dashboard() {
             isVerified: client.isVerified,
             postLimit: client.postLimit || 0,
             profilePic: client.profilePic,
-            role:client.role
+            role: client.role
           }));
-          const adminClientData=JSON.stringify(formattedUsers)
-         localStorage.setItem("adminClientData",adminClientData)
+          const adminClientData = JSON.stringify(formattedUsers)
+          localStorage.setItem("adminClientData", adminClientData)
         }
       } catch (err) {
         console.error("Error fetching owners:", err);
@@ -75,6 +81,41 @@ export default function Dashboard() {
 
     fetchAdminClient();
   }, []);
+
+  const handleViewDetails = (lead) => {
+    setSelectedLead(lead);
+    setShowDetailModal(true);
+  };
+
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      new: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'New' },
+      contacted: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Contacted' },
+      completed: { bg: 'bg-green-100', text: 'text-green-700', label: 'Completed' }
+    };
+    const config = statusConfig[status] || statusConfig.new;
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
+        {config.label}
+      </span>
+    );
+  };
+
+  const getPriorityBadge = (priority) => {
+    const priorityConfig = {
+      high: { bg: 'bg-red-100', text: 'text-red-700', icon: '🔥' },
+      medium: { bg: 'bg-orange-100', text: 'text-orange-700', icon: '⚡' },
+      low: { bg: 'bg-gray-100', text: 'text-gray-700', icon: '📋' }
+    };
+    const config = priorityConfig[priority] || priorityConfig.medium;
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
+        {config.icon} {priority?.charAt(0).toUpperCase() + priority?.slice(1)}
+      </span>
+    );
+  };
+
+
 
   if (loading) {
     return (
@@ -170,9 +211,9 @@ export default function Dashboard() {
 
         {/* Builders */}
         <div
-         onClick={() =>{
-          navigate("/users",{state:{role:"builders"}})
-        }}
+          onClick={() => {
+            navigate("/users", { state: { role: "builders" } })
+          }}
           className="cursor-pointer bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white shadow-lg hover:scale-[1.03] transition-transform"
         >
           <div className="flex items-center justify-between mb-4">
@@ -203,9 +244,13 @@ export default function Dashboard() {
       </div>
 
       {/* 📊 Additional Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" >
         {/* Total Views */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm" onClick={() => {
+          console.log("property::",)
+          setShowProperty(true);
+          setShowLeads(false);
+        }}>
           <div className="flex items-center gap-3 mb-3">
             <Eye className="w-6 h-6 text-blue-600" />
             <div>
@@ -221,7 +266,11 @@ export default function Dashboard() {
         </div>
 
         {/* Total Leads */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm" onClick={() => {
+          console.log("lead")
+          setShowProperty(false)
+          setShowLeads(true)
+        }}>
           <div className="flex items-center gap-3 mb-3">
             <UserCog className="w-6 h-6 text-green-600" />
             <div>
@@ -264,7 +313,7 @@ export default function Dashboard() {
       </div>
 
       {/* 🏠 Recent Properties */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      {showProperty && <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">
             Recent Properties
@@ -295,7 +344,7 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3">
                       <img
                         src={
-                          property.photos?.[0] ||
+                          JSON.parse(property.photos)?.[0] ||
                           "https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg"
                         }
                         alt={property.title}
@@ -331,7 +380,34 @@ export default function Dashboard() {
             </tbody>
           </table>
         </div>
-      </div>
+      </div>}
+      {showLeads && <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Leads
+          </h2>
+        </div>
+        <div className="overflow-x-auto">
+          {dashboardData?.leads.map((lead) => (
+            <LeadItem
+              key={lead.id}
+              lead={lead}
+              onViewDetails={() => handleViewDetails(lead)}
+              getStatusBadge={getStatusBadge}
+              getPriorityBadge={getPriorityBadge}
+            />
+          ))}
+
+        </div>
+      </div>}
+      {showDetailModal && selectedLead && (
+        <LeadDetailModal
+          lead={selectedLead}
+          onClose={() => setShowDetailModal(false)}
+          getStatusBadge={getStatusBadge}
+          getPriorityBadge={getPriorityBadge}
+        />
+      )}
     </div>
   );
 }

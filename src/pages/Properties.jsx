@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Search, Home, CheckCircle, XCircle, Clock, Eye, IndianRupee, MapPin, Plus, Edit, Trash2, Heart, HomeIcon } from "lucide-react";
+import { Search, Home, CheckCircle, XCircle, Clock, Eye, IndianRupee, MapPin, Plus, Edit, Trash2, Heart, HomeIcon, ArrowBigLeft } from "lucide-react";
 import PropertyForm from "../components/PropertyForm";
 import ApiService from "../hooks/ApiService";
+import { useNavigate } from "react-router-dom";
 
 export default function Properties() {
   const [properties, setProperties] = useState([]);
@@ -15,12 +16,12 @@ export default function Properties() {
   const [wishlistedProperties, setWishlistedProperties] = useState({});
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
-
+  const navigate = useNavigate();
   // ✅ Fetch properties from API
   const fetchProperties = async () => {
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:3000/api/properties");
+      const res = await fetch("https://vizaglandservices.esotericprojects.tech/api/properties");
       if (!res.ok) throw new Error("Failed to fetch properties");
       const data = await res.json();
       setProperties(data.properties || []);
@@ -116,7 +117,7 @@ export default function Properties() {
       )
     ) {
       try {
-        await fetch(`http://localhost:3000/api/properties/${id}`, {
+        await fetch(`https://vizaglandservices.esotericprojects.tech/api/properties/${id}`, {
           method: "DELETE",
         });
         setProperties((prev) => prev.filter((p) => p.id !== id));
@@ -132,7 +133,7 @@ export default function Properties() {
     const adminClientData = localStorage.getItem("adminClientData");
     formData.clientId = adminClientData.id;
     try {
-      const res = await ApiService.post("/properties", formData, {
+      const res = await ApiService.post("/properties/admin-property", formData, {
         headers: {
           Authorization: `Bearer ${adminToken}`,
           "Content-Type": "application/json",
@@ -146,6 +147,7 @@ export default function Properties() {
       }
 
       setShowEditModal(false);
+      window.location.reload()
       alert("Property added successfully!");
     } catch (err) {
       console.error("Error adding property:", err);
@@ -279,9 +281,10 @@ export default function Properties() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <div className="flex items-center space-x-3">
-          <Home
+          <ArrowBigLeft
             size={20}
             className="w-8 h-8 text-red-500 transition-all duration-300 cursor-pointer"
+            onClick={()=>navigate("/")}
           />
 
           <div>
@@ -347,7 +350,7 @@ export default function Properties() {
               <div className="relative">
                 <img
                   src={
-                    property.photos?.[0] ||
+                    JSON.parse(property.photos)?.[0] ||
                     "https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg"
                   }
                   alt={property.title}
@@ -414,13 +417,13 @@ export default function Properties() {
                   <p>
                     Posted by:{" "}
                     <span className="font-medium text-gray-700 capitalize">
-                      {property.client.role}
+                      {property?.client?.role || "Admin"}
                     </span>
                   </p>
                   <p>
                     Owner:{" "}
                     <span className="font-medium text-gray-700 capitalize" >
-                      {property.client?.fullName || "Unknown"}
+                      {property?.client?.fullName || "Unknown"}
                     </span>
                   </p>
                   <p>

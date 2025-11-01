@@ -332,10 +332,10 @@ export const DataProvider = ({ children }) => {
   });
 
   useEffect(() => {
-    localStorage.setItem("users", JSON.stringify(users));
-    localStorage.setItem("agents", JSON.stringify(agents));
-    localStorage.setItem("builders", JSON.stringify(builders));
-    localStorage.setItem("properties", JSON.stringify(properties));
+    // localStorage.setItem("users", JSON.stringify(users));
+    // localStorage.setItem("agents", JSON.stringify(agents));
+    // localStorage.setItem("builders", JSON.stringify(builders));
+    // localStorage.setItem("properties", JSON.stringify(properties));
   }, [users, agents, builders, properties]);
 
   const updatePropertyStatus = (id, status) => {

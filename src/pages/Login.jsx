@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Mail } from 'lucide-react';
+import { Lock, Mail,Eye,EyeOff } from 'lucide-react';
 import ApiService from '../hooks/ApiService';
 
 export default function Login() {
@@ -10,7 +10,8 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
+  const [showPassword, setShowPassword] = useState(false);
+  
   useEffect(() => {
     localStorage.clear();
   }, []);
@@ -95,21 +96,36 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="text-white/70 text-sm mb-1 block">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
-              <div className="flex items-center bg-white/10 rounded-lg px-3 py-2 border border-white/20">
-                <Lock className="text-white/60 w-4 h-4 mr-2" />
+
+              <div className="relative">
                 <input
-                  type="password"
-                  placeholder="Enter your password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-transparent flex-1 outline-none text-white placeholder-white/50 text-sm"
                   required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none pr-10"
+                  placeholder="Enter your password"
                 />
+
+                {/* Eye Icon */}
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <Eye className="h-5 w-5" />
+                  ) : (
+                    <EyeOff className="h-5 w-5" />
+                  )}
+                </button>
               </div>
             </div>
+
 
             {error && (
               <p className="text-red-400 text-sm text-center">{error}</p>
