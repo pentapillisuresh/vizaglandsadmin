@@ -3,6 +3,7 @@ import { Search, Home, CheckCircle, XCircle, Clock, Eye, IndianRupee, MapPin, Pl
 import PropertyForm from "../components/PropertyForm";
 import ApiService from "../hooks/ApiService";
 import { useNavigate } from "react-router-dom";
+import getPhotoSrc from "../hooks/getPhotos";
 
 export default function Properties() {
   const [properties, setProperties] = useState([]);
@@ -21,10 +22,14 @@ export default function Properties() {
   const fetchProperties = async () => {
     try {
       setLoading(true);
-      const res = await fetch("https://vizaglandservices.esotericprojects.tech/api/properties");
-      if (!res.ok) throw new Error("Failed to fetch properties");
-      const data = await res.json();
-      setProperties(data.properties || []);
+      const res = await ApiService.get("/properties", {
+        headers: {
+          // Authorization: `Bearer ${adminToken}`,
+          "Content-Type": "application/json'"
+        }
+      }
+      );
+      setProperties(res.properties || []);
     } catch (err) {
       console.error(err);
       setError("Failed to load properties. Please try again later.");
@@ -53,9 +58,9 @@ export default function Properties() {
     const matchesFilter =
       filter === "all" ||
       (filter === "pending" && property.status === "pending") ||
-      (filter === "approved" && property.status === "approved") ||
       (filter === "rejected" && property.status === "rejected") ||
-      (filter === "verified" && property.status === "verified");
+      (filter === "verified" && property.status === "verified") ||
+      (filter === "sold" && property.isSold === true);
     return matchesSearch && matchesFilter;
   });
 
@@ -116,9 +121,13 @@ export default function Properties() {
         "Are you sure you want to delete this property? This action cannot be undone."
       )
     ) {
+      const adminToken = localStorage.getItem("token");
       try {
-        await fetch(`https://vizaglandservices.esotericprojects.tech/api/properties/${id}`, {
-          method: "DELETE",
+        await ApiService.delete(`/properties/${id}`, {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json'"
+          }
         });
         setProperties((prev) => prev.filter((p) => p.id !== id));
         alert("Property deleted successfully!");
@@ -127,6 +136,7 @@ export default function Properties() {
       }
     }
   };
+
 
   const handleAddProperty = async (formData) => {
     const adminToken = localStorage.getItem("token");
@@ -186,6 +196,14 @@ export default function Properties() {
     } catch (err) {
       alert(err.message);
     }
+  };
+  const handleEdit = (listing) => {
+    navigate(`/post-property?edit=${listing.id}`, {
+      state: {
+        listing, // or any other data you want to send
+        mode: 'edit',
+      },
+    });    // setShowEditModal(true);
   };
 
   const handleStatus = async (id, status) => {
@@ -284,7 +302,7 @@ export default function Properties() {
           <ArrowBigLeft
             size={20}
             className="w-8 h-8 text-red-500 transition-all duration-300 cursor-pointer"
-            onClick={()=>navigate("/")}
+            onClick={() => navigate("/")}
           />
 
           <div>
@@ -298,7 +316,7 @@ export default function Properties() {
         </div>
 
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => navigate('/post-property')}
           className="mt-4 sm:mt-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center gap-2 shadow-sm"
         >
           <Plus className="w-5 h-5" />
@@ -321,7 +339,7 @@ export default function Properties() {
           </div>
 
           <div className="flex gap-2">
-            {["all", "pending", "approved", "verified", "rejected"].map(
+            {["all", "pending", "verified", "rejected", "sold"].map(
               (status) => (
                 <button
                   key={status}
@@ -335,6 +353,7 @@ export default function Properties() {
                 </button>
               )
             )}
+
           </div>
         </div>
       </div>
@@ -349,30 +368,32 @@ export default function Properties() {
             >
               <div className="relative">
                 <img
-                  src={
-                    JSON.parse(property.photos)?.[0] ||
-                    "https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg"
-                  }
+                  src={getPhotoSrc(property.photos)}
                   alt={property.title}
                   className="w-full h-48 object-cover"
                 />
+
                 <div className="absolute top-3 right-3 flex items-center gap-2">
                   <button
-                    onClick={() =>
-                      handleWishlistClick(property.id, property.status, !property.isActive)
-                    }
-                    className={`p-2 rounded-full backdrop-blur-sm transition-all duration-300 ${property.isActive
-                      ? "bg-red-500 hover:bg-red-600 scale-110"
-                      : "bg-white/80 hover:bg-white"
+                    onClick={() => handleWishlistClick(property.id, property.status, !property.isActive)}
+                    disabled={property.status === "pending" || property.status === "rejected"}
+                    className={`p-2 rounded-full backdrop-blur-sm transition-all duration-300 
+    ${property.status === "pending" || property.status === "rejected"
+                        ? "opacity-50 cursor-not-allowed"
+                        : property.isActive
+                          ? "bg-red-500 hover:bg-red-600 scale-110"
+                          : "bg-white/80 hover:bg-white shadow-md hover:shadow-lg"
                       }`}
                   >
                     <Heart
-                      className={`w-5 h-5 transition-all duration-300 ${property.isActive
-                        ? "fill-white text-white"
-                        : "text-gray-700 hover:text-red-500"
+                      className={`w-5 h-5 transition-all duration-300 
+      ${property.isActive
+                          ? "fill-white text-white"
+                          : "text-gray-700 hover:text-red-500"
                         }`}
                     />
                   </button>
+
                 </div>
                 <div className="absolute top-3 left-3">
                   <span
@@ -383,7 +404,9 @@ export default function Properties() {
                     {getStatusIcon(property.status)}
                     {property.status}
                   </span>
+
                 </div>
+
               </div>
 
               <div className="p-4">
@@ -394,6 +417,11 @@ export default function Properties() {
                 <div className="flex items-center text-sm text-gray-600 mb-2">
                   <MapPin className="w-4 h-4 mr-1" />
                   {property.address.city}, {property.address.locality}
+                {property?.isSold && (
+                  <span className="px-2 py-1 ml-4 text-xs font-semibold bg-red-100 text-red-700 rounded-full">
+                    SOLD
+                  </span>)
+                }
                 </div>
 
                 <div className="flex items-center justify-between mb-3">
@@ -435,7 +463,7 @@ export default function Properties() {
                 </div>
 
                 <div className="flex gap-2">
-                  {property.status === "pending" && (
+                  {(property.status === "rejected" || property.status === "pending") && (
                     <>
                       <button
                         onClick={() => handleStatus(property.id, "verified")}
@@ -444,6 +472,10 @@ export default function Properties() {
                         <CheckCircle className="w-4 h-4" />
                         Approve
                       </button>
+                    </>
+                  )}
+                  {(property.status === "verified" || property.status === "pending") && (
+                    <>
                       <button
                         onClick={() => handleStatus(property.id, "rejected")}
                         className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm flex items-center justify-center gap-1"
@@ -455,7 +487,7 @@ export default function Properties() {
                   )}
 
                   <button
-                    onClick={() => openEditModal(property)}
+                    onClick={() => handleEdit(property)}
                     className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm flex items-center justify-center gap-1"
                   >
                     <Edit className="w-4 h-4" />
@@ -466,6 +498,7 @@ export default function Properties() {
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+
                 </div>
               </div>
             </div>

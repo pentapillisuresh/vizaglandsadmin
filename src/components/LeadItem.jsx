@@ -8,9 +8,10 @@ import {
   Calendar,
   ExternalLink,
 } from "lucide-react";
+import getPhotoSrc from "../hooks/getPhotos";
 
 function LeadItem({ lead, onViewDetails, getStatusBadge, getPriorityBadge }) {
-const photo=JSON.parse(lead?.property?.photos)[0];
+const photo=getPhotoSrc(lead?.property?.photos);
 console.log("rrr::",photo)
     return (
     <div className="p-6 hover:bg-gray-50 transition-colors border-b">

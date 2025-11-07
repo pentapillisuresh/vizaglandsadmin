@@ -106,7 +106,7 @@ const Setting = () => {
     const adminDetails = localStorage.getItem('adminDetails');
     const adminData = JSON.parse(adminDetails);
     const adminToken = localStorage.getItem('token');
-    console.log("rrr::", profileData)
+
     try {
       const res = await ApiService.put(`/clients/admin/${adminData.id}`,
         profileData, {
@@ -114,8 +114,7 @@ const Setting = () => {
           Authorization: `Bearer ${adminToken}`,
           "Content-Type": "application/json"
         }
-      }
-      );
+      });
       alert("Profile updated successfully!");
       setProfileData(res.admin);
       setOriginalData(res.admin);

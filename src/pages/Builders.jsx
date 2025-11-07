@@ -21,7 +21,7 @@ export default function Builders() {
   const {role} = location.state || {};  // 🔹 State
   // 🔹 Fetch users from API
   useEffect(() => {
-    const fetchOwners = async () => {
+    const fetchBuilders = async () => {
       try {
         setLoading(true);
         setError("");
@@ -34,8 +34,8 @@ export default function Builders() {
               'Content-Type': 'application/json'
             }
           }
-        );;
-        if (!res) throw new Error("Failed to fetch owners");
+        );
+        if (!res) throw new Error("Failed to fetch builders");
         
 
         if (Array.isArray(res.clients)) {
@@ -45,6 +45,12 @@ export default function Builders() {
             fullName: client.fullName,
             email: client.email,
             phone: client.phoneNumber,
+            companyName: client.companyName,
+            address: client.address,
+            kycProofName: client.kycProofName,
+            kycProofNumber: client.kycProofNumber,
+            kycUploadFile: client.kycUploadFile,
+            createdAt: client.createdAt,
             isActive: client.status === "active",
             isDocsVerified: client.isVerified,
             propertiesAdded: client.properties?.length || 0,
@@ -59,14 +65,14 @@ export default function Builders() {
           setUsers([]);
         }
       } catch (err) {
-        console.error("Error fetching owners:", err);
+        console.error("Error fetching builders:", err);
         setError("Failed to load data. Please try again.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchOwners();
+    fetchBuilders();
   }, []);
 
   // 🔹 Filter logic
@@ -85,7 +91,7 @@ export default function Builders() {
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center h-96">
-        <p className="text-gray-500 text-sm">Loading owners...</p>
+        <p className="text-gray-500 text-sm">Loading builders...</p>
       </div>
     );
   }
@@ -109,9 +115,9 @@ export default function Builders() {
     <div className="p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Owner Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Builder Management</h1>
           <p className="text-sm text-gray-500">
-            View and manage property owners
+            View and manage property builders
           </p>
         </div>
       </div>
@@ -155,7 +161,7 @@ export default function Builders() {
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Owner
+                    Builder
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Contact
@@ -257,7 +263,7 @@ export default function Builders() {
         <div className="text-center py-16 bg-white rounded-xl shadow-sm border border-gray-200">
           <UsersIcon className="w-14 h-14 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-800 mb-1">
-            No owners found
+            No builders found
           </h3>
           <p className="text-sm text-gray-500">Try adjusting your filters</p>
         </div>

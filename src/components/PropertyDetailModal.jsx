@@ -1,5 +1,6 @@
 import { X, CheckCircle, XCircle } from "lucide-react";
 import { useData } from "../context/DataContext";
+import getPhotoSrc from "../hooks/getPhotos";
 
 export default function PropertyDetailModal({ userId, userType, properties, onClose }) {
   const { agents, builders, users, updatePropertyStatus } = useData();
@@ -36,24 +37,23 @@ export default function PropertyDetailModal({ userId, userType, properties, onCl
             <div key={property.id} className="border rounded-xl overflow-hidden bg-white shadow hover:shadow-lg transition">
               {/* Image */}
               <div className="w-full h-64 bg-gray-100 overflow-hidden">
-                {property.photos?.[0] ? (
-                  <img src={property.photos[0]} alt={property.title} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-gray-400">No Image</div>
-                )}
+                <img
+                  src={getPhotoSrc(property.photos)}
+                  alt={property.title || "Property image"}
+                  className="w-full h-full object-cover"
+                />
               </div>
 
               <div className="p-6 space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-bold text-gray-900">{property.title}</h3>
                   <span
-                    className={`px-3 py-1 text-xs rounded-full font-semibold capitalize ${
-                      property.status === "approved"
-                        ? "bg-green-100 text-green-700"
-                        : property.status === "rejected"
+                    className={`px-3 py-1 text-xs rounded-full font-semibold capitalize ${property.status === "approved"
+                      ? "bg-green-100 text-green-700"
+                      : property.status === "rejected"
                         ? "bg-red-100 text-red-700"
                         : "bg-yellow-100 text-yellow-700"
-                    }`}
+                      }`}
                   >
                     {property.status}
                   </span>

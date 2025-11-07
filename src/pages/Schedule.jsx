@@ -16,23 +16,27 @@ export default function Schedule() {
       try {
         setLoading(true);
         setError("");
-        const adminToken = localStorage.getItem('token');
+        const adminToken = localStorage.getItem("token");
+
         const res = await ApiService.get("/leads", {
           headers: {
             Authorization: `Bearer ${adminToken}`,
-            'Content-Type': 'application/json'
-          }
-        }
-        );
-        const leads = res?.leads || [];
+            "Content-Type": "application/json",
+          },
+        });
 
+        const rrr = res?.leads || [];
+        const leads=rrr.filter((item)=>item.leadType==='callback')
+console.log("rrr::",leads)
         // 🔹 Group leads dynamically by property category name
         const grouped = {};
 
         leads.forEach((lead) => {
-          const category = lead?.property?.category?.name || "Unknown";
+          const category =lead?.property?.category?.name?.trim() || "Quote";
+          // if (!category) return; // 🚫 Skip leads with no category
+
           const city =
-            lead?.property?.address?.city || lead?.city || "Unknown";
+            lead?.property?.address?.city || lead?.city || "N/A";
 
           const normalized = {
             id: lead.id,
@@ -50,9 +54,11 @@ export default function Schedule() {
         });
 
         setData(grouped);
+
+        // Only use valid category tabs
         const uniqueTabs = Object.keys(grouped);
         setTabs(uniqueTabs);
-        setActiveTab(uniqueTabs[0] || "");
+        setActiveTab(uniqueTabs[0] || "quote");
       } catch (err) {
         console.error("Error fetching leads:", err);
         setError("Failed to fetch leads. Please try again.");
@@ -88,11 +94,25 @@ export default function Schedule() {
   // 🔹 Save remark (local for now — ready for PUT API)
   const handleSaveRemark = async (id) => {
     const entry = data[activeTab].find((item) => item.id === id);
-    console.log("Saving remark:", entry);
+    console.log("entry::", entry)
+    try {
+      const adminToken = localStorage.getItem('token');
+      const res = await ApiService.put(`/leads/${id}`, { remark: entry.remarks }, {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      if (res) {
+        const leads = res?.lead;
+        alert(`Remark saved for ${entry.name}: "${entry.remarks}"`);
+      }
+    } catch (err) {
+      console.error("Error fetching leads:", err);
+      setError("Failed to update remark lead. Please try again.");
+    }
 
-    alert(`Remark saved for ${entry.name}: "${entry.remarks}"`);
     // Future: PUT request to backend to save remark
-    // await axios.put(`https://vizaglandservices.esotericprojects.tech/api/leads/${id}`, { remark: entry.remarks });
   };
 
   return (
@@ -117,11 +137,10 @@ export default function Schedule() {
                 setActiveTab(tab);
                 setSelectedCity("All");
               }}
-              className={`px-6 py-2.5 rounded-md text-sm font-medium transition-all duration-200 ${
-                activeTab === tab
-                  ? "bg-[#11233A] text-white shadow-lg"
-                  : "bg-white text-gray-700 border border-gray-300 hover:border-[#11233A] hover:text-[#11233A]"
-              }`}
+              className={`px-6 py-2.5 rounded-md text-sm font-medium transition-all duration-200 ${activeTab === tab
+                ? "bg-[#11233A] text-white shadow-lg"
+                : "bg-white text-gray-700 border border-gray-300 hover:border-[#11233A] hover:text-[#11233A]"
+                }`}
             >
               {tab}
             </button>
@@ -188,9 +207,8 @@ export default function Schedule() {
                       {filteredData.map((item, index) => (
                         <tr
                           key={item.id}
-                          className={`${
-                            index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                          } hover:bg-blue-50 transition-colors`}
+                          className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                            } hover:bg-blue-50 transition-colors`}
                         >
                           <td className="py-4 px-6 text-gray-900 font-medium">
                             {item.name}

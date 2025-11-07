@@ -4,6 +4,7 @@ import { Users, UserCog, Building2, Home, Clock, CheckCircle, XCircle, Eye, Mess
 import ApiService from "../hooks/ApiService";
 import LeadItem from "../components/LeadItem";
 import LeadDetailModal from "../components/LeadDetailModal";
+import getPhotoSrc from "../hooks/getPhotos";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -335,6 +336,9 @@ export default function Dashboard() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Status
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Posted By
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -343,13 +347,11 @@ export default function Dashboard() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <img
-                        src={
-                          JSON.parse(property.photos)?.[0] ||
-                          "https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg"
-                        }
+                        src={getPhotoSrc(property.photos)}
                         alt={property.title}
                         className="w-12 h-12 rounded-lg object-cover"
                       />
+
                       <div>
                         <p className="text-sm font-medium text-gray-900">
                           {property.title}
@@ -374,6 +376,9 @@ export default function Dashboard() {
                     >
                       {property.status}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                  {property.client?.role || "N/A"}
                   </td>
                 </tr>
               ))}

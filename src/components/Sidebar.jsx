@@ -7,6 +7,7 @@ import {
   Calendar,
   Settings,
   LogOut,
+  BluetoothSearching,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -19,8 +20,9 @@ export default function Sidebar() {
     { path: "/agents", icon: Users, label: "Agents", role: "agent" },
     { path: "/builders", icon: Users, label: "Builders", role: "builder" },
        { path: "/schedule", icon: Calendar, label: "Leads" },
+       { path: "/blog", icon: BluetoothSearching, label: "Blog" },
     { path: "/buy-development", icon: Calendar, label: "Property Enquiry" },
-    // { path: "/content", icon: LayoutDashboard, label: "Manage Content" },
+    { path: "/content", icon: LayoutDashboard, label: "Manage Content" },
     { path: "/settings", icon: Settings, label: "Settings" },
   ];
 

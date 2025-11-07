@@ -16,6 +16,8 @@ import Agents from "./pages/Agents";
 import Builders from "./pages/Builders";
 
 import "./App.css";
+import PostProperty from "./pages/PostProperty";
+import Blogs from "./pages/blogs";
 
 // ✅ Protect admin routes
 function PrivateRoute({ children }) {
@@ -48,9 +50,12 @@ function App() {
             <Route path="builders" element={<Builders />} />
             <Route path="schedule" element={<Schedule />} />
             <Route path="leads" element={<Leads />} />
+            <Route path="blog" element={<Blogs />} />
             <Route path="buy-development" element={<BuyDevelopment />} />
             <Route path="content" element={<ContentManager />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="/post-property" element={<PostProperty />} />
+
           </Route>
 
           {/* Catch-all Redirect */}

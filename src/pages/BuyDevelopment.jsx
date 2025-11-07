@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Search, Eye, X } from "lucide-react";
 import ApiService from "../hooks/ApiService";
+import getPhotoSrc from "../hooks/getPhotos";
 
 const BuyDevelopment = () => {
-  const [activeTab, setActiveTab] = useState("callback");
+  const [activeTab, setActiveTab] = useState("investorInquiry"); // default to "buy"
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItem, setSelectedItem] = useState(null);
   const [leads, setLeads] = useState([]);
@@ -13,15 +14,19 @@ const BuyDevelopment = () => {
   useEffect(() => {
     const fetchLeads = async () => {
       try {
-        const adminToken = localStorage.getItem('token');
+        const adminToken = localStorage.getItem("token");
         const response = await ApiService.get("/leads", {
           headers: {
             Authorization: `Bearer ${adminToken}`,
-            'Content-Type': 'application/json'
-          }
-
+            "Content-Type": "application/json",
+          },
         });
-        setLeads(response.leads || []);
+
+        // ✅ Filter out callback leads
+        const validLeads = (response.leads || []).filter(
+          (lead) => lead.leadType !== "callback"
+        );
+        setLeads(validLeads);
       } catch (error) {
         console.error("Error fetching leads:", error);
       } finally {
@@ -32,24 +37,21 @@ const BuyDevelopment = () => {
     fetchLeads();
   }, []);
 
+  // Switch between tabs
   const tabData = (type) => {
     switch (type) {
-      case "callback":
-        setActiveTab("callback")
-        break;
       case "buy":
-        setActiveTab("investorInquiry")
+        setActiveTab("investorInquiry");
         break;
       case "development":
-        setActiveTab("developmentInquiry")
+        setActiveTab("developmentInquiry");
         break;
-
       default:
         break;
     }
-  }
+  };
 
-  // Filter leads by tab type and search term
+  // Filter leads by tab type and search
   const filteredLeads = leads
     .filter((lead) => lead.leadType === activeTab)
     .filter(
@@ -66,22 +68,24 @@ const BuyDevelopment = () => {
           Leads Management
         </h1>
         <p className="text-gray-500">
-          Manage all leads efficiently from the database
+          Manage all investor and development leads efficiently
         </p>
       </div>
 
       {/* Tabs + Search */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
         <div className="flex space-x-3">
-          {/* Tabs based on leadType */}
-          {["callback", "buy", "development"].map((type) => (
+          {/* Tabs (no callback tab now) */}
+          {["buy", "development"].map((type) => (
             <button
               key={type}
               onClick={() => tabData(type)}
-              className={`px-5 py-2 rounded-lg font-medium border capitalize ${activeTab === type
+              className={`px-5 py-2 rounded-lg font-medium border capitalize ${
+                (activeTab === "investorInquiry" && type === "buy") ||
+                (activeTab === "developmentInquiry" && type === "development")
                   ? "bg-blue-600 text-white border-blue-600"
                   : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-                }`}
+              }`}
             >
               {type}
             </button>
@@ -139,17 +143,18 @@ const BuyDevelopment = () => {
                     {lead.property?.propertyName || "N/A"}
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell">
-                    {lead.property?.address?.city || "N/A"}
+                    {lead.city || lead.property?.address?.city || "N/A"}
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell">
-                    {lead.property?.address?.locality || "N/A"}
+                    {lead.location || lead.property?.address?.locality || "N/A"}
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell">
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${lead.status === "new"
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        lead.status === "new"
                           ? "text-yellow-600 bg-yellow-100"
                           : "text-green-600 bg-green-100"
-                        }`}
+                      }`}
                     >
                       {lead.status}
                     </span>
@@ -176,62 +181,39 @@ const BuyDevelopment = () => {
             </div>
 
             <div className="p-5 space-y-3">
-              <p>
-                <span className="font-semibold">Name:</span> {selectedItem.name}
-              </p>
-              <p>
-                <span className="font-semibold">Email:</span> {selectedItem.email}
-              </p>
-              <p>
-                <span className="font-semibold">Phone:</span>{" "}
-                {selectedItem.phoneNumber}
-              </p>
-              <p>
-                <span className="font-semibold">Message:</span>{" "}
-                {selectedItem.message || "—"}
-              </p>
+              <p><span className="font-semibold">Name:</span> {selectedItem.name}</p>
+              <p><span className="font-semibold">Email:</span> {selectedItem.email}</p>
+              <p><span className="font-semibold">Phone:</span> {selectedItem.phoneNumber}</p>
+              <p><span className="font-semibold">Message:</span> {selectedItem.message || "—"}</p>
 
-              <p>
-                <span className="font-semibold">Property:</span>{" "}
-                {selectedItem.property?.propertyName}
-              </p>
-              <p>
-                <span className="font-semibold">Category:</span>{" "}
-                {selectedItem.property?.category?.name}
-              </p>
-              <p>
-                <span className="font-semibold">Price:</span>{" "}
-                ₹{selectedItem.property?.price}
-              </p>
-              <p>
-                <span className="font-semibold">City:</span>{" "}
-                {selectedItem.property?.address?.city}
-              </p>
-              <p>
-                <span className="font-semibold">Locality:</span>{" "}
-                {selectedItem.property?.address?.locality}
-              </p>
-              <p>
-                <span className="font-semibold">Nearby:</span>{" "}
-                {selectedItem.property?.address?.nearby}
-              </p>
-              <div>
-                <span className="font-semibold">Image:</span>
-                {selectedItem.property?.category?.photo && (
-                  <img
-                    src={selectedItem.property.category.photo}
-                    alt="Property"
-                    className="w-full mt-2 rounded-lg border"
-                  />
-                )}
-              </div>
+              {selectedItem.property && (
+                <>
+                  <p><span className="font-semibold">Property:</span> {selectedItem.property.propertyName}</p>
+                  <p><span className="font-semibold">Category:</span> {selectedItem.property.category?.name}</p>
+                  <p><span className="font-semibold">Price:</span> ₹{selectedItem.property.price}</p>
+                  <p><span className="font-semibold">City:</span> {selectedItem.property.address?.city}</p>
+                  <p><span className="font-semibold">Locality:</span> {selectedItem.property.address?.locality}</p>
+                  {selectedItem.property.photos && (
+                    <div>
+                      <span className="font-semibold">Images:</span>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        {selectedItem.property.photos.map((img, i) => (
+                          <img key={i} src={img} alt="Property" className="rounded border" />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
               <p>
                 <span className="font-semibold">Status:</span>{" "}
                 <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${selectedItem.status === "new"
+                  className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    selectedItem.status === "new"
                       ? "text-yellow-600 bg-yellow-100"
                       : "text-green-600 bg-green-100"
-                    }`}
+                  }`}
                 >
                   {selectedItem.status}
                 </span>

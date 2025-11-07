@@ -1,6 +1,8 @@
-import { useState } from "react";
-import {X,CheckCircle,XCircle,Settings,MapPin,IndianRupee,Eye,Edit} from "lucide-react";
+import { useEffect, useState } from "react";
+import { X, CheckCircle, XCircle, Settings, MapPin, IndianRupee, Eye, Edit } from "lucide-react";
 import ApiService from "../hooks/ApiService";
+import { useNavigate } from "react-router-dom";
+import getPhotoSrc from "../hooks/getPhotos";
 
 export default function UserDetails({ user, type, onClose }) {
   const [isDocsVerified, setIsDocsVerified] = useState(user.isDocsVerified);
@@ -11,28 +13,32 @@ export default function UserDetails({ user, type, onClose }) {
   });
   const [editingProperty, setEditingProperty] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
-
+const navigate=useNavigate();
   const userProperties = user.properties || [];
+
+  useEffect(() => {
+    console.log("user::", user)
+  }, [])
 
   // 🔹 Local handlers for toggles (placeholder for real API integration)
   const handleApproveDocs = () => {
     setIsDocsVerified(true);
-      const rrr={
-        status:'active',
-        isVerified:true
-      }
-      handleUpdatePermission(rrr)
+    const rrr = {
+      status: 'active',
+      isVerified: true
+    }
+    handleUpdatePermission(rrr)
   };
 
   const handleRejectDocs = () => {
     setIsDocsVerified(false);
-    const rrr={
-      status:'suspended',
-      isVerified:false
+    const rrr = {
+      status: 'suspended',
+      isVerified: false
 
     }
     handleUpdatePermission(rrr)
-};
+  };
 
   const handleUpdatePermission = async (updateData) => {
     const adminToken = localStorage.getItem('token');
@@ -47,14 +53,37 @@ export default function UserDetails({ user, type, onClose }) {
       }
       );
       alert("limit updated successfully!");
-      if(res){
+      if (res) {
         window.location.reload();
-            }
+      }
     } catch (error) {
       console.error("Error updating client:", error);
       alert("Failed to update profile");
-    } 
+    }
     setShowPermissionModal(false);
+  };
+
+  const handleStatus = async (id, status) => {
+    try {
+      const adminToken = localStorage.getItem("token");
+
+      const response = await ApiService.put(`/properties/${id}`, { status },
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            'Content-Type': 'application/json'
+          }
+        },
+      )
+
+      if (response) {
+        window.location.reload();
+      } else {
+        console.log("rrr::", response?.message)
+      }
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   const handleApproveProperty = (propertyId) => {
@@ -81,6 +110,14 @@ export default function UserDetails({ user, type, onClose }) {
       default:
         return "bg-gray-100 text-gray-700";
     }
+  };
+  const handleEdit = (listing) => {
+    navigate(`/post-property?edit=${listing.id}`, {
+      state: {
+        listing, // or any other data you want to send
+        mode: 'edit',
+      },
+    });    // setShowEditModal(true);
   };
 
   return (
@@ -166,11 +203,10 @@ export default function UserDetails({ user, type, onClose }) {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-700">Account</span>
                   <span
-                    className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                      user.isActive
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
-                    }`}
+                    className={`px-2.5 py-1 rounded-full text-xs font-semibold ${user.isActive
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                      }`}
                   >
                     {user.isActive ? "Active" : "Inactive"}
                   </span>
@@ -179,11 +215,10 @@ export default function UserDetails({ user, type, onClose }) {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-700">Can Add Property</span>
                   <span
-                    className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                      user.canAddProperty
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
-                    }`}
+                    className={`px-2.5 py-1 rounded-full text-xs font-semibold ${user.canAddProperty
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                      }`}
                   >
                     {user.canAddProperty ? "Yes" : "No"}
                   </span>
@@ -206,11 +241,10 @@ export default function UserDetails({ user, type, onClose }) {
                 Document Verification
               </h3>
               <span
-                className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                  isDocsVerified
-                    ? "bg-green-100 text-green-700"
-                    : "bg-amber-100 text-amber-700"
-                }`}
+                className={`px-2.5 py-1 rounded-full text-xs font-semibold ${isDocsVerified
+                  ? "bg-green-100 text-green-700"
+                  : "bg-amber-100 text-amber-700"
+                  }`}
               >
                 {isDocsVerified ? "Verified" : "Pending"}
               </span>
@@ -220,7 +254,7 @@ export default function UserDetails({ user, type, onClose }) {
               {user.kycUploadFile ? (
                 <div>
                   <p className="text-xs text-gray-500 mb-2">
-                    {user.kycProofName || "KYC Document"}
+                    {user.kycProofName || "KYC Document"} - {user.kycProofNumber || "KYC Number"}
                   </p>
                   <img
                     src={user.kycUploadFile}
@@ -292,13 +326,11 @@ export default function UserDetails({ user, type, onClose }) {
                     className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition"
                   >
                     <img
-                      src={
-                        property.photos?.[0] ||
-                        "https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg"
-                      }
+                      src={getPhotoSrc(property.photos)}
                       alt={property.title}
-                      className="w-full h-40 object-cover"
+                      className="w-full h-48 object-cover"
                     />
+
                     <div className="p-4">
                       <div className="flex items-start justify-between mb-2">
                         <h4 className="text-sm font-semibold text-gray-900 line-clamp-2">
@@ -328,21 +360,28 @@ export default function UserDetails({ user, type, onClose }) {
                       </div>
 
                       <div className="flex gap-2 mt-3 pt-3 border-t">
-                        {property.status === "pending" && (
+                      <button
+                          onClick={() => handleEdit(property)}
+                          className="flex-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-xs flex items-center justify-center gap-1"
+                        >
+                          <Edit className="w-3 h-3" />
+                          Edit
+                        </button>
+                        {(property.status === "rejected" || property.status === "pending") && (
                           <>
                             <button
-                              onClick={() =>
-                                handleApproveProperty(property.id)
-                              }
+                              onClick={() => handleStatus(property.id, "verified")}
                               className="flex-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-xs flex items-center justify-center gap-1"
                             >
                               <CheckCircle className="w-3 h-3" />
                               Approve
                             </button>
+                            </>
+                          )}
+                        {(property.status === "verified" || property.status === "pending") && (
+                          <>
                             <button
-                              onClick={() =>
-                                handleRejectProperty(property.id)
-                              }
+                              onClick={() => handleStatus(property.id, "rejected")}
                               className="flex-1 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-xs flex items-center justify-center gap-1"
                             >
                               <XCircle className="w-3 h-3" />
@@ -418,9 +457,9 @@ export default function UserDetails({ user, type, onClose }) {
                   Cancel
                 </button>
                 <button
-                  onClick={()=>{
-                    const rrr={
-                      postLimit:permissionData.propertyLimit
+                  onClick={() => {
+                    const rrr = {
+                      postLimit: permissionData.propertyLimit
                     }
                     handleUpdatePermission(rrr)
                   }}
