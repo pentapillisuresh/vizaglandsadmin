@@ -93,7 +93,7 @@ export default function Leads() {
       {/* Filters */}
       <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm mb-8">
         <div className="flex flex-wrap gap-2">
-          {["all", "new", "contacted", "qualified", "converted"].map((status) => (
+          {['site visit', 'closing','notinterest' ,'noResponse','pending'].map((status) => (
             <button
               key={status}
               onClick={() => setFilter(status)}

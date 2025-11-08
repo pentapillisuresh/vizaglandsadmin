@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Home, CheckCircle, XCircle, Clock, Eye, IndianRupee, MapPin, Plus, Edit, Trash2, Heart, HomeIcon, ArrowBigLeft } from "lucide-react";
+import { Search, Home, CheckCircle,Tag, XCircle, Clock, Eye, IndianRupee, MapPin, Plus, Edit, Trash2, Heart, HomeIcon, ArrowBigLeft } from "lucide-react";
 import PropertyForm from "../components/PropertyForm";
 import ApiService from "../hooks/ApiService";
 import { useNavigate } from "react-router-dom";
@@ -60,7 +60,10 @@ export default function Properties() {
       (filter === "pending" && property.status === "pending") ||
       (filter === "rejected" && property.status === "rejected") ||
       (filter === "verified" && property.status === "verified") ||
-      (filter === "sold" && property.isSold === true);
+      (filter === "sold" && property.isSold === true)||
+      (filter === "owner" && property?.client?.role === 'owner')||
+      (filter === "agent" && property?.client?.role === 'agent')||
+      (filter === "builder" && property?.client?.role === 'builder');
     return matchesSearch && matchesFilter;
   });
 
@@ -137,6 +140,29 @@ export default function Properties() {
     }
   };
 
+  const handleSold = async (id) => {
+    if (
+      window.confirm(
+        "Are you sure you want to make as SOLD this property? This action cannot be undone."
+      )
+    ) {
+      const adminToken = localStorage.getItem('token');
+      try {
+        const res = await ApiService.put(`/properties/${id}`, { isSold: true }, {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json'"
+          }
+        });
+        if (res) {
+          alert("Property update isSold successfully!");
+        }
+        fetchProperties()
+      } catch (err) {
+        alert("Failed to delete property.");
+      }
+    }
+  };
 
   const handleAddProperty = async (formData) => {
     const adminToken = localStorage.getItem("token");
@@ -327,7 +353,24 @@ export default function Properties() {
       {/* Filters */}
       <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm mb-8">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="relative w-full md:w-96">
+        <div className="flex gap-2">
+            {["owner", "agent", "builder"].map(
+              (status) => (
+                <button
+                  key={status}
+                  onClick={() => setFilter(status)}
+                  className={`px-4 py-2 text-sm rounded-lg border transition font-medium ${filter === status
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    }`}
+                >
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </button>
+              )
+            )}
+
+          </div>
+          <div className="relative w-full md:w-76">
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
             <input
               type="text"
@@ -498,6 +541,15 @@ export default function Properties() {
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+                  {(!property?.isSold && property?.status === "verified") && (
+                          <button
+                            onClick={() => handleSold(property?.id)}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
+                          >
+                            <Tag className="w-4 h-4" />
+                            Sold
+                          </button>
+                        )}
 
                 </div>
               </div>
