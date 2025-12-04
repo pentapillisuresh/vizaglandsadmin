@@ -6,9 +6,9 @@ import BasicDetails from '../components/property-steps/BasicDetails';
 import LocationDetails from '../components/property-steps/LocationDetails';
 import PropertyProfile from '../components/property-steps/PropertyProfile';
 import PhotosVideos from '../components/property-steps/PhotosVideos';
-import PricingOthers from '../components/property-steps/PricingOthers';
+import PricingOthers_projects from '../components/property-steps/PricingOthers_projects';
 
-const PostProperty = () => {
+const PostProject = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const navigate = useNavigate();
   const location = useLocation();
@@ -232,11 +232,11 @@ const PostProperty = () => {
               <PhotosVideos data={propertyData} updateData={updatePropertyData} onNext={handleNext} isEditMode={isEditMode} />
             )}
             {currentStep === 5 &&
-              <PricingOthers data={propertyData} updateData={updatePropertyData} isEditMode={isEditMode} />}
+              <PricingOthers_projects data={propertyData} updateData={updatePropertyData} isEditMode={isEditMode} />}
           </div>
         </div>
       </div>
     </div>
   );
 };
-export default PostProperty;
+export default PostProject;

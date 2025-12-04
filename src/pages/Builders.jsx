@@ -18,7 +18,7 @@ export default function Builders() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const location = useLocation();
-  const {role} = location.state || {};  // 🔹 State
+  const { role } = location.state || {};  // 🔹 State
   // 🔹 Fetch users from API
   useEffect(() => {
     const fetchBuilders = async () => {
@@ -36,7 +36,7 @@ export default function Builders() {
           }
         );
         if (!res) throw new Error("Failed to fetch builders");
-        
+
 
         if (Array.isArray(res.clients)) {
           // Normalize the data to match table expectations
@@ -47,6 +47,7 @@ export default function Builders() {
             phone: client.phoneNumber,
             companyName: client.companyName,
             address: client.address,
+            area: client.area,
             kycProofName: client.kycProofName,
             kycProofNumber: client.kycProofNumber,
             kycUploadFile: client.kycUploadFile,
@@ -79,7 +80,8 @@ export default function Builders() {
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.phone.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter =
       filter === "all" ||
       (filter === "active" && user.isActive) ||
@@ -142,8 +144,8 @@ export default function Builders() {
                 key={status}
                 onClick={() => setFilter(status)}
                 className={`px-4 py-2 text-sm rounded-lg border transition font-medium ${filter === status
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                   }`}
               >
                 {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -237,8 +239,8 @@ export default function Builders() {
                     <td className="px-6 py-4">
                       <span
                         className={`px-2.5 py-1 rounded-full text-xs font-semibold ${user.isActive
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
                           }`}
                       >
                         {user.isActive ? "Active" : "Inactive"}
@@ -273,7 +275,7 @@ export default function Builders() {
       {selectedUser && (
         <UserDetails
           user={selectedUser}
-          type="customer"
+          type="Builder"
           onClose={() => setSelectedUser(null)}
         />
       )}

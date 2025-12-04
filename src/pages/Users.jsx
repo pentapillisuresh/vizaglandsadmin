@@ -47,6 +47,7 @@ export default function Users() {
             phone: client.phoneNumber,
             companyName: client.companyName,
             address: client.address,
+            area:client.area,
             kycProofName: client.kycProofName,
             kycProofNumber: client.kycProofNumber,
             kycUploadFile: client.kycUploadFile,
@@ -79,7 +80,8 @@ export default function Users() {
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+      user.email.toLowerCase().includes(searchTerm.toLowerCase())||
+      user.phone.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter =
       filter === "all" ||
       (filter === "active" && user.isActive) ||
@@ -273,7 +275,7 @@ export default function Users() {
       {selectedUser && (
         <UserDetails
           user={selectedUser}
-          type="customer"
+          type="Owner"
           onClose={() => setSelectedUser(null)}
         />
       )}

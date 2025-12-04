@@ -131,7 +131,7 @@ const navigate=useNavigate();
       >
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">Owner Details</h2>
+          <h2 className="text-xl font-bold text-gray-900">{type} Details</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition"
