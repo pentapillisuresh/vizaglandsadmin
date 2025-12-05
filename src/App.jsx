@@ -18,6 +18,7 @@ import Builders from "./pages/Builders";
 
 import "./App.css";
 import PostProperty from "./pages/PostProperty";
+import PostProject from "./pages/PostProject";
 import Blogs from "./pages/blogs";
 
 // ✅ Protect admin routes
@@ -57,6 +58,7 @@ function App() {
             <Route path="content" element={<ContentManager />} />
             <Route path="settings" element={<Settings />} />
             <Route path="/post-property" element={<PostProperty />} />
+            <Route path="/post-projects" element={<PostProject />} />
 
           </Route>
 

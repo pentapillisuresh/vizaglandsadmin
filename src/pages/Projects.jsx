@@ -95,7 +95,7 @@ export default function Projects() {
         }
       );
       if (response) {
-        // Show notification when project is made live
+        // Show notification when project is made live 
         if (!wishlistedProjects[projectId]) {
           setNotificationMessage("Project is Live");
           setShowNotification(true);
@@ -342,7 +342,7 @@ export default function Projects() {
         </div>
 
         <button
-          onClick={() => navigate('/post-project')}
+          onClick={() => navigate('/post-property')}
           className="mt-4 sm:mt-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center gap-2 shadow-sm"
         >
           <Plus className="w-5 h-5" />
