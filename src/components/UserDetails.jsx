@@ -116,6 +116,7 @@ const navigate=useNavigate();
       state: {
         listing, // or any other data you want to send
         mode: 'edit',
+        isProject: false   // 👈 pass boolean here
       },
     });    // setShowEditModal(true);
   };

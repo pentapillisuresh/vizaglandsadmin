@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const PropertyProfile = ({ data = {}, onNext, updateData }) => {
+const PropertyProfile = ({ data = {}, onNext, updateData,isProject }) => {
   // Property subtype
   const [propertySubtype, setPropertySubtype] = useState(data.propertySubtype || "");
 
@@ -395,10 +395,10 @@ const PropertyProfile = ({ data = {}, onNext, updateData }) => {
     <div className="space-y-8">
       <div>
         <h2 className="font-serif text-3xl font-bold text-blue-900 mb-2">
-          Property Profile
+        {!isProject?"Property":"Project"} Profile
         </h2>
         <p className="font-roboto text-gray-600">
-          Tell us more about your property specifications
+          Tell us more about your {!isProject?"Property":"Project"} specifications
         </p>
       </div>
 

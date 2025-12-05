@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import ApiService from "../../hooks/ApiService";
 import getAdvantages from "../../hooks/getNearBy";
 
-const LocationDetails = ({ data, updateData, onNext, isEditMode }) => {
+const LocationDetails = ({ data, updateData, onNext, isEditMode,isProject }) => {
   const [cities, setCities] = useState([]);
   const [localities, setLocalities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -152,7 +152,7 @@ const LocationDetails = ({ data, updateData, onNext, isEditMode }) => {
     <div className="space-y-8">
       <div>
         <h2 className="font-serif text-3xl font-bold text-blue-900 mb-2">
-          {isEditMode ? "Edit Property Location" : "Where is your property located?"}
+          {isEditMode ? `Edit ${!isProject?"Property":"Project"} Location` : `Where is your ${!isProject?"Property":"Project"} located?`}
         </h2>
         <p className="font-roboto text-gray-600">
           Accurate location details help you reach the right buyers.

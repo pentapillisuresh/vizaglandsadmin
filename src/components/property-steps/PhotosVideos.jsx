@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Upload, X } from "lucide-react";
 import ApiService from "../../hooks/ApiService";
 
-const PhotosVideos = ({ data = {}, updateData, onNext }) => {
+const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
   const [dragActive, setDragActive] = useState(false);
   const existingPhotos = data.photos;
   const existingVideo = data.videos;

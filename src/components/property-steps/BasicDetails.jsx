@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import ApiService from '../../hooks/ApiService';
 
-const BasicDetails = ({ data, updateData, onNext, isEditMode }) => {
+const BasicDetails = ({ data, updateData, onNext, isEditMode,isProject }) => {
   // 🧩 Local states (initialized with data)
   const [listingType, setListingType] = useState(data?.marketType || 'Sale');
   const [propertyType, setPropertyType] = useState(data?.category?.catType || 'residential');
@@ -200,7 +200,7 @@ useEffect(() => {
         {/* 🏠 Property Title */}
         <div className="mt-4">
           <label className="block font-roboto text-base font-medium text-gray-700 mb-3">
-            Property Title
+            {!isProject?"Property":"Project"} Title
           </label>
           <input
             type="text"

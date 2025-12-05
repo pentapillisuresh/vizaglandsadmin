@@ -17,6 +17,7 @@ export default function Sidebar() {
     { path: "/", icon: LayoutDashboard, label: "Dashboard" },
     { path: "/properties", icon: Home, label: "Properties" },
     { path: "/projects", icon: Home, label: "Projects" },
+    { path: "/handOverProperties", icon: Home, label: "HandOver Properties" },
     { path: "/users", icon: Users, label: "Owners", role: "owner" },
     { path: "/agents", icon: Users, label: "Agents", role: "agent" },
     { path: "/builders", icon: Users, label: "Builders", role: "builder" },

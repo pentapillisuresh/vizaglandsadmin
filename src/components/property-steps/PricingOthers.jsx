@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ApiService from '../../hooks/ApiService';
 
-const PricingOthers = ({ data, updateData, isEditMode }) => {
+const PricingOthers = ({ data, updateData, isEditMode,isProject }) => {
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
   const [privateNotes, setPrivateNotes] = useState('');
@@ -96,6 +96,7 @@ console.log("rrr::",data)
         privateNotes: privateNotes || null,
         approvedBy: approvedBy || null,
         amenities: amenities || [],
+        isProject
       };
     
       let response;
@@ -127,7 +128,7 @@ console.log("rrr::",data)
         );
       }
     
-      if (response && response.success) {
+      if (response || response.success) {
         console.log('✅ Property saved:', response);
         setSuccess(true);
         updateData(response.data || propertyDataToSave);
@@ -176,7 +177,7 @@ console.log("rrr::",data)
         {/* Description */}
         <div>
           <label className="block font-roboto text-sm font-medium text-gray-700 mb-2">
-            Property Description <span className="text-red-500">*</span>
+          {!isProject?"Property":"Project"} Description <span className="text-red-500">*</span>
           </label>
           <textarea
             value={description}
@@ -259,7 +260,7 @@ console.log("rrr::",data)
 
       {/* Property Summary */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-10">
-        <h3 className="font-serif text-lg font-bold text-blue-900 mb-4">Property Summary</h3>
+        <h3 className="font-serif text-lg font-bold text-blue-900 mb-4">{!isProject?"Property":"Project"} Summary</h3>
         <div className="grid grid-cols-2 gap-4 font-roboto text-sm">
           <div>
             <span className="text-gray-600">Type:</span>

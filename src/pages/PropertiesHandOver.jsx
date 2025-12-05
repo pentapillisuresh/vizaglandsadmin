@@ -5,7 +5,7 @@ import ApiService from "../hooks/ApiService";
 import { useNavigate } from "react-router-dom";
 import getPhotoSrc from "../hooks/getPhotos";
 
-export default function Properties() {
+export default function PropertiesHandOver() {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -56,68 +56,23 @@ export default function Properties() {
     const matchesSearch =
       property.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       property.address?.city?.toLowerCase().includes(searchTerm.toLowerCase());
+  
+    // 👇 DEFAULT handover check TRUE
+    const handOverFilter = property.isHandOver === true;
+  
     const matchesFilter =
       filter === "all" ||
       (filter === "pending" && property.status === "pending") ||
       (filter === "rejected" && property.status === "rejected") ||
       (filter === "verified" && property.status === "verified") ||
       (filter === "sold" && property.isSold === true) ||
-      (filter === "owner" && property?.client?.role === 'owner') ||
-      (filter === "agent" && property?.client?.role === 'agent') ||
-      (filter === "builder" && property?.client?.role === 'builder');
-    return matchesSearch && matchesFilter;
+      (filter === "owner" && property?.client?.role === "owner") ||
+      (filter === "agent" && property?.client?.role === "agent") ||
+      (filter === "builder" && property?.client?.role === "builder");
+  
+    return handOverFilter && matchesSearch && matchesFilter;
   });
-
-  const handleWishlistClick = async (propertyId, propertyStatus, isActive) => {
-    if (propertyStatus === "verified" || propertyStatus === "approved") {
-      // Toggle wishlist state locally
-      setWishlistedProperties((prev) => ({
-        ...prev,
-        [propertyId]: !prev[propertyId],
-      }));
-    }
-
-    try {
-      const adminToken = localStorage.getItem("token");
-      if (!adminToken) {
-        alert("Admin token not found. Please log in again.");
-        return;
-      }
-
-      // Make API request
-      const response = await ApiService.put(
-        `/properties/${propertyId}`,
-        { isActive },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      if (response) {
-        // Show notification when property is made live
-        if (!wishlistedProperties[propertyId]) {
-          setNotificationMessage("Property is Live");
-          setShowNotification(true);
-          setTimeout(() => setShowNotification(false), 3000);
-        }
-        fetchProperties()
-        // Optional: reload or refetch data
-        // window.location.reload(); // reloads the current page
-        // OR ideally: refetch data instead of reloading
-        // fetchProperties();
-
-        console.log("Property updated successfully!");
-      } else {
-        console.error("Error updating property:", response?.message);
-        alert("Failed to update property. Please try again.");
-      }
-    } catch (err) {
-      console.error("Error:", err);
-      alert(err.message || "An unexpected error occurred.");
-    }
-  };
+  
 
   const handleOverClick = async (propertyId, propertyStatus, isHandOver) => {
     if (propertyStatus === "verified" || propertyStatus === "approved") {
@@ -216,65 +171,6 @@ export default function Properties() {
     }
   };
 
-  const handleAddProperty = async (formData) => {
-    const adminToken = localStorage.getItem("token");
-    const adminClientData = localStorage.getItem("adminClientData");
-    formData.clientId = adminClientData.id;
-    try {
-      const res = await ApiService.post("/properties/admin-property", formData, {
-        headers: {
-          Authorization: `Bearer ${adminToken}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = res.property;
-
-      if (!res || res.status !== 200) {
-        throw new Error(data?.message || "Failed to add property");
-      }
-
-      setShowEditModal(false);
-      window.location.reload()
-      alert("Property added successfully!");
-    } catch (err) {
-      console.error("Error adding property:", err);
-      alert(err.message || "An error occurred while adding the property.");
-    }
-  };
-
-  const handleUpdateProperty = async (formData) => {
-    console.log("from::", formData)
-
-    try {
-      const adminToken = localStorage.getItem("token");
-
-      const response = await ApiService.put(`/properties/${formData.id}`, formData,
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            'Content-Type': 'application/json'
-          }
-        },
-      )
-
-      if (response) {
-        setShowEditModal(false);
-        navigate('./properties')
-      } else {
-        console.log("rrr::", response?.message)
-      }
-
-      setProperties((prev) =>
-        prev.map((p) => (p.id === editingProperty.id ? response.property : p))
-      );
-      setShowEditModal(false);
-      setEditingProperty(null);
-      alert("Property updated successfully!");
-    } catch (err) {
-      alert(err.message);
-    }
-  };
   const handleEdit = (listing) => {
     navigate(`/post-property?edit=${listing.id}`, {
       state: {
@@ -475,28 +371,6 @@ export default function Properties() {
                   className="w-full h-48 object-cover"
                 />
 
-                <div className="absolute top-3 right-3 flex items-center gap-2">
-                  <button
-                    onClick={() => handleWishlistClick(property.id, property.status, !property.isActive)}
-                    disabled={property.status === "pending" || property.status === "rejected"}
-                    className={`p-2 rounded-full backdrop-blur-sm transition-all duration-300 
-                    ${property.status === "pending" || property.status === "rejected"
-                        ? "opacity-50 cursor-not-allowed"
-                        : property.isActive
-                          ? "bg-red-500 hover:bg-red-600 scale-110"
-                          : "bg-white/80 hover:bg-white shadow-md hover:shadow-lg"
-                      }`}
-                  >
-                    <ThumbsUpIcon
-                      className={`w-6 h-6 transition-all duration-300 
-                    ${property.isActive
-                          ? "fill-white text-white"
-                          : "text-gray-700 hover:text-red-500"
-                        }`}
-                    />
-                  </button>
-
-                </div>
 
                 <div className="absolute bottom-0 right-3 flex items-center gap-3
                 bg-black/50 px-3 py-1 rounded-full backdrop-blur-sm">
@@ -513,7 +387,7 @@ export default function Properties() {
                     }
                     disabled={property.status === "pending" || property.status === "rejected"}
                     className={`relative inline-flex items-center h-6 w-11 rounded-full transition-all
-                    ${property.status === "pending" || property.status === "rejected" 
+                    ${property.status === "pending" || property.status === "rejected"
                         ? "opacity-40 cursor-not-allowed bg-gray-400"
                         : property.isHandOver
                           ? "bg-green-500"
@@ -598,28 +472,8 @@ export default function Properties() {
                 </div>
 
                 <div className="flex gap-2">
-                  {(property.status === "rejected" || property.status === "pending") && (
-                    <>
-                      <button
-                        onClick={() => handleStatus(property.id, "verified")}
-                        className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm flex items-center justify-center gap-1"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Approve
-                      </button>
-                    </>
-                  )}
-                  {(property.status === "verified" || property.status === "pending") && (
-                    <>
-                      <button
-                        onClick={() => handleStatus(property.id, "rejected")}
-                        className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm flex items-center justify-center gap-1"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        Reject
-                      </button>
-                    </>
-                  )}
+                
+                 
 
                   <button
                     onClick={() => handleEdit(property)}
@@ -655,60 +509,6 @@ export default function Properties() {
             No properties found
           </h3>
           <p className="text-sm text-gray-500">Try adjusting your filters</p>
-        </div>
-      )}
-
-      {/* Add/Edit Modals */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
-              <h2 className="text-xl font-bold text-gray-900">
-                Add New Property
-              </h2>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
-              >
-                <Plus className="w-5 h-5 text-gray-500 rotate-45" />
-              </button>
-            </div>
-            <div className="p-6">
-              <PropertyForm
-                onSubmit={handleAddProperty}
-                onCancel={() => setShowAddModal(false)}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showEditModal && editingProperty && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
-              <h2 className="text-xl font-bold text-gray-900">Edit Property</h2>
-              <button
-                onClick={() => {
-                  setShowEditModal(false);
-                  setEditingProperty(null);
-                }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
-              >
-                <Plus className="w-5 h-5 text-gray-500 rotate-45" />
-              </button>
-            </div>
-            <div className="p-6">
-              <PropertyForm
-                initialData={editingProperty}
-                onSubmit={handleUpdateProperty}
-                onCancel={() => {
-                  setShowEditModal(false);
-                  setEditingProperty(null);
-                }}
-              />
-            </div>
-          </div>
         </div>
       )}
 

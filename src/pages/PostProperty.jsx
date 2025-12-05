@@ -13,7 +13,8 @@ const PostProperty = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ✅ Detect edit mode and get listing data
+  const isProject = location.state?.isProject ?? false;  // 👈 read boolean
+    // ✅ Detect edit mode and get listing data
   const listing = location.state?.listing || null;
   const isEditMode = Boolean(listing);
   // ✅ Updated structure to match backend model
@@ -60,13 +61,13 @@ const PostProperty = () => {
       roadFacing: 0,
       plotAvailable: 0,
       facing: "East",
-      carpetArea: "",
+      carpetArea: 0,
       isParkingAvailable: false,
       parkingType: "",
       status: "",
       areaUnit: "sqft",
-      buildArea: "",
-      superBuildArea: "",
+      buildArea: 0,
+      superBuildArea: 0,
       shopNumber: "",
       frontage: "",
       roadWidth: "",
@@ -220,19 +221,19 @@ const PostProperty = () => {
             </button>
 
             {currentStep === 1 && (
-              <BasicDetails data={propertyData} updateData={updatePropertyData} onNext={handleNext} isEditMode={isEditMode} />
+              <BasicDetails data={propertyData} updateData={updatePropertyData} onNext={handleNext} isEditMode={isEditMode} isProject={isProject} />
             )}
             {currentStep === 2 && (
-              <LocationDetails data={propertyData} updateData={updatePropertyData} onNext={handleNext} isEditMode={isEditMode} />
+              <LocationDetails data={propertyData} updateData={updatePropertyData} onNext={handleNext} isEditMode={isEditMode} isProject={isProject} />
             )}
             {currentStep === 3 && (
-              <PropertyProfile data={propertyData} updateData={updatePropertyData} onNext={handleNext} isEditMode={isEditMode} />
+              <PropertyProfile data={propertyData} updateData={updatePropertyData} onNext={handleNext} isEditMode={isEditMode} isProject={isProject} />
             )}
             {currentStep === 4 && (
-              <PhotosVideos data={propertyData} updateData={updatePropertyData} onNext={handleNext} isEditMode={isEditMode} />
+              <PhotosVideos data={propertyData} updateData={updatePropertyData} onNext={handleNext} isEditMode={isEditMode} isProject={isProject}/>
             )}
             {currentStep === 5 &&
-              <PricingOthers data={propertyData} updateData={updatePropertyData} isEditMode={isEditMode} />}
+              <PricingOthers data={propertyData} updateData={updatePropertyData} isEditMode={isEditMode} isProject={isProject}/>}
           </div>
         </div>
       </div>

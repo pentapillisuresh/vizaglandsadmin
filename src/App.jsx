@@ -6,6 +6,7 @@ import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Properties from "./pages/Properties";
 import Projects from "./pages/Projects";
+import HandOverProperties from "./pages/PropertiesHandOver";
 import Users from "./pages/Users";
 import Schedule from "./pages/Schedule";
 import Leads from "./pages/Leads";
@@ -48,6 +49,7 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="properties" element={<Properties />} />
             <Route path="projects" element={<Projects />} />
+            <Route path="handOverProperties" element={<HandOverProperties />} />
             <Route path="users"  element={<Users key={location?.state?.role || "default"} />} />
             <Route path="agents" element={<Agents />} />
             <Route path="builders" element={<Builders />} />
