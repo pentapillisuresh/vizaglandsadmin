@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect,useRef} from "react";
 import {
   Eye,
   Edit,
@@ -22,7 +22,7 @@ export default function Blogs() {
     content: "",
     status: "draft",
   });
-
+  const fileInputRef = useRef(null);
   // Fetch Blogs
   const fetchBlogs = async () => {
     try {
@@ -116,6 +116,33 @@ export default function Blogs() {
       });
     }
     setShowForm(true);
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
+
+
+  const uploadImage = async (file) => {
+    const formData = new FormData();
+
+    formData.append("image", file);
+    const adminToken = localStorage.getItem('token');
+
+    try {
+      const res = await ApiService.post("/images/upload", formData, {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          "Content-Type": "multipart/form-data"
+        }
+      });
+      return res.url; // Assuming your backend returns { imageUrl: "..." }
+    } catch (error) {
+      console.error("Image upload failed:", error);
+      alert("Image upload failed");
+      return null;
+    }
   };
 
   return (
@@ -281,16 +308,40 @@ export default function Blogs() {
               className="w-full border px-3 py-2 rounded-lg text-sm"
               required
             />
+<input
+  type="text"
+  placeholder="Click to upload image"
+  value={formData.photo}
+  readOnly
+  onClick={triggerFileInput}
+  className="w-full border px-3 py-2 rounded-lg text-sm cursor-pointer bg-gray-50"
+/>
+{formData.photo && (
+  <img
+    src={formData.photo}
+    alt="Preview"
+    className="w-full h-40 object-cover rounded-lg mt-2"
+  />
+)}
 
-            <input
-              type="text"
-              placeholder="Photo URL"
-              value={formData.photo}
-              onChange={(e) =>
-                setFormData({ ...formData, photo: e.target.value })
-              }
-              className="w-full border px-3 py-2 rounded-lg text-sm"
-            />
+<input
+  type="file"
+  accept="image/*"
+  ref={fileInputRef}
+  className="hidden"
+  onChange={async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const imageUrl = await uploadImage(file);
+    if (imageUrl) {
+      setFormData((prev) => ({
+        ...prev,
+        photo: imageUrl,
+      }));
+    }
+  }}
+/>
 
             <textarea
               placeholder="Description"

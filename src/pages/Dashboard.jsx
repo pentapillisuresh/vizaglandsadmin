@@ -139,6 +139,7 @@ export default function Dashboard() {
     totalAgents: dashboardData.AgentCount,
     totalBuilders: dashboardData.BuilderCount,
     totalProperties: dashboardData.addedPropertiesCount,
+    totalProjects: dashboardData.ProjectsCount,
     verifiedProperties: dashboardData.verifiedPropertiesCount,
     totalViews: dashboardData.totalViews,
     totalLeads: dashboardData.totalLeadsCount,
@@ -236,6 +237,21 @@ export default function Dashboard() {
             <div className="text-right">
               <p className="text-sm opacity-90">Total Properties</p>
               <p className="text-3xl font-bold">{stats.totalProperties}</p>
+            </div>
+          </div>
+          <div className="text-xs opacity-90">
+            {stats.verifiedProperties} Verified
+          </div>
+        </div>
+        <div
+          onClick={() => handleNavigate("/properties")}
+          className="cursor-pointer bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg hover:scale-[1.03] transition-transform"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <Home className="w-8 h-8 opacity-80" />
+            <div className="text-right">
+              <p className="text-sm opacity-90">Total Projects</p>
+              <p className="text-3xl font-bold">{stats.totalProjects}</p>
             </div>
           </div>
           <div className="text-xs opacity-90">
