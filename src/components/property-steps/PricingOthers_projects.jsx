@@ -103,7 +103,7 @@ console.log("rrr::",data)
       if (isEditMode && data?.id) {
         // 🟢 Update existing property
         response = await ApiService.put(
-          `/projects/${data.id}`,
+          `/properties/${data.id}`,
           propertyDataToSave,
           {
             headers: {
@@ -116,7 +116,7 @@ console.log("rrr::",data)
         // 🟢 Add new property
         propertyDataToSave.clientId = clientId;
         response = await ApiService.post(
-          '/projects/admin-property',
+          '/properties/admin-property',
           propertyDataToSave,
           {
             headers: {
