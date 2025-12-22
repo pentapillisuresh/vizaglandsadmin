@@ -85,7 +85,7 @@ export default function Projects() {
 
       // Make API request
       const response = await ApiService.put(
-        `/projects/${projectId}`,
+        `/properties/${projectId}`,
         { isActive },
         {
           headers: {
@@ -126,7 +126,7 @@ export default function Projects() {
     ) {
       const adminToken = localStorage.getItem("token");
       try {
-        await ApiService.delete(`/projects/${id}`, {
+        await ApiService.delete(`/properties/${id}`, {
           headers: {
             Authorization: `Bearer ${adminToken}`,
             "Content-Type": "application/json'"
@@ -148,7 +148,7 @@ export default function Projects() {
     ) {
       const adminToken = localStorage.getItem('token');
       try {
-        const res = await ApiService.put(`/projects/${id}`, { isSold: true }, {
+        const res = await ApiService.put(`/properties/${id}`, { isSold: true }, {
           headers: {
             Authorization: `Bearer ${adminToken}`,
             "Content-Type": "application/json'"
@@ -169,7 +169,7 @@ export default function Projects() {
     const adminClientData = localStorage.getItem("adminClientData");
     formData.clientId = adminClientData.id;
     try {
-      const res = await ApiService.post("/projects/admin-project", formData, {
+      const res = await ApiService.post("/properties/admin-property", formData, {
         headers: {
           Authorization: `Bearer ${adminToken}`,
           "Content-Type": "application/json",
@@ -197,7 +197,7 @@ export default function Projects() {
     try {
       const adminToken = localStorage.getItem("token");
 
-      const response = await ApiService.put(`/projects/${formData.id}`, formData,
+      const response = await ApiService.put(`/properties/${formData.id}`, formData,
         {
           headers: {
             Authorization: `Bearer ${adminToken}`,
@@ -237,7 +237,7 @@ export default function Projects() {
     try {
       const adminToken = localStorage.getItem("token");
 
-      const response = await ApiService.put(`/projects/${id}`, { status },
+      const response = await ApiService.put(`/properties/${id}`, { status },
         {
           headers: {
             Authorization: `Bearer ${adminToken}`,
