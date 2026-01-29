@@ -120,15 +120,19 @@ const PostProperty = () => {
   // ✅ Track visited steps
   useEffect(() => {
     if (!visitedSteps.includes(currentStep)) {
-      setVisitedSteps([...visitedSteps, currentStep]);
+      setVisitedSteps(prev => [...prev, currentStep]);
     }
   }, [currentStep]);
 
   // ✅ Handle step click navigation
   const handleStepClick = (stepNumber) => {
-    // Only allow navigation to visited steps
-    if (visitedSteps.includes(stepNumber)) {
+    // Allow navigation to any visited step OR to the next step from current
+    if (visitedSteps.includes(stepNumber) || stepNumber <= currentStep + 1) {
       setCurrentStep(stepNumber);
+      // Also add this step to visitedSteps if not already there
+      if (!visitedSteps.includes(stepNumber)) {
+        setVisitedSteps(prev => [...prev, stepNumber]);
+      }
     }
   };
 
@@ -150,7 +154,12 @@ const PostProperty = () => {
 
   const handleNext = () => {
     if (currentStep < steps.length) {
-      setCurrentStep(currentStep + 1);
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
+      // Add next step to visited steps
+      if (!visitedSteps.includes(nextStep)) {
+        setVisitedSteps(prev => [...prev, nextStep]);
+      }
     }
   };
 
@@ -185,11 +194,12 @@ const PostProperty = () => {
         <div className="grid lg:grid-cols-[300px_1fr] gap-8">
           {/* Left Sidebar */}
           <div className="bg-white rounded-xl shadow-sm p-6 h-fit">
-            {/* Pass onStepClick handler */}
+            {/* Pass visitedSteps to StepIndicator */}
             <StepIndicator 
               steps={steps} 
               currentStep={currentStep} 
               onStepClick={handleStepClick}
+              visitedSteps={visitedSteps}
             />
 
             {/* Property Score */}
