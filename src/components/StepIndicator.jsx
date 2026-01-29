@@ -1,4 +1,4 @@
-const StepIndicator = ({ steps, currentStep }) => {
+const StepIndicator = ({ steps, currentStep, onStepClick }) => {
   return (
     <div className="relative">
       {steps.map((step, index) => (
@@ -33,13 +33,20 @@ const StepIndicator = ({ steps, currentStep }) => {
             </div>
 
             <div className="flex-1 min-w-0">
-              <h4
-                className={`font-serif text-base font-semibold ${
-                  currentStep === step.number ? 'text-blue-900' : 'text-gray-600'
+              {/* Make the title clickable */}
+              <button
+                onClick={() => onStepClick && onStepClick(step.number)}
+                disabled={currentStep < step.number}
+                className={`text-left focus:outline-none font-serif text-base font-semibold ${
+                  currentStep === step.number 
+                    ? 'text-blue-900' 
+                    : currentStep > step.number
+                    ? 'text-gray-600 cursor-pointer hover:text-blue-700'
+                    : 'text-gray-400 cursor-not-allowed'
                 }`}
               >
                 {step.title}
-              </h4>
+              </button>
               <p className="font-roboto text-sm text-gray-500">{step.subtitle}</p>
             </div>
           </div>

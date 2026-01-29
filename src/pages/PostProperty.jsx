@@ -10,11 +10,12 @@ import PricingOthers from '../components/property-steps/PricingOthers';
 
 const PostProperty = () => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [visitedSteps, setVisitedSteps] = useState([1]); // Track visited steps
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isProject = location.state?.isProject ?? false;  // 👈 read boolean
-    // ✅ Detect edit mode and get listing data
+  const isProject = location.state?.isProject ?? false;
+  // ✅ Detect edit mode and get listing data
   const listing = location.state?.listing || null;
   const isEditMode = Boolean(listing);
   // ✅ Updated structure to match backend model
@@ -89,6 +90,7 @@ const PostProperty = () => {
       securityAvailable: false
     },
   });
+  
   // ✅ If editing, prefill property data
   useEffect(() => {
     if (isEditMode && listing) {
@@ -115,14 +117,20 @@ const PostProperty = () => {
     { number: 5, title: 'Amenities', subtitle: 'Step 5' },
   ];
 
-  // ✅ Update function to merge step data
-  // const updatePropertyData = (data) => {
-  //   setPropertyData((prev) => {
-  //     const updated = { ...prev, ...data };
-  //     return updated;
-  //   });
-  //   console.log('Updated propertyData:', { ...propertyData, ...data });
-  // };
+  // ✅ Track visited steps
+  useEffect(() => {
+    if (!visitedSteps.includes(currentStep)) {
+      setVisitedSteps([...visitedSteps, currentStep]);
+    }
+  }, [currentStep]);
+
+  // ✅ Handle step click navigation
+  const handleStepClick = (stepNumber) => {
+    // Only allow navigation to visited steps
+    if (visitedSteps.includes(stepNumber)) {
+      setCurrentStep(stepNumber);
+    }
+  };
 
   // ✅ Merge partial updates from child components
   const updatePropertyData = (data) => {
@@ -177,7 +185,12 @@ const PostProperty = () => {
         <div className="grid lg:grid-cols-[300px_1fr] gap-8">
           {/* Left Sidebar */}
           <div className="bg-white rounded-xl shadow-sm p-6 h-fit">
-            <StepIndicator steps={steps} currentStep={currentStep} />
+            {/* Pass onStepClick handler */}
+            <StepIndicator 
+              steps={steps} 
+              currentStep={currentStep} 
+              onStepClick={handleStepClick}
+            />
 
             {/* Property Score */}
             <div className="mt-8 pt-8 border-t border-gray-200">
