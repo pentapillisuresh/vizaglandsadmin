@@ -1,37 +1,22 @@
 import { useEffect, useState } from 'react';
 import ApiService from '../../hooks/ApiService';
 
-const BasicDetails = ({ data, updateData, onNext, isEditMode,isProject }) => {
-  // 🧩 Local states (initialized with data)
+const BasicDetails = ({ data, updateData, onNext, isEditMode, isProject }) => {
+  // 🧩 Directly use data from props for form fields
   const [listingType, setListingType] = useState(data?.marketType || 'Sale');
-  const [propertyType, setPropertyType] = useState(data?.category?.catType || 'residential');
-  const [propertySubtype, setPropertySubtype] = useState(data?.category?.name || '');
-  const [customSubtype, setCustomSubtype] = useState('');
+  const [propertyType, setPropertyType] = useState(data?.propertyKind || 'residential');
+  const [propertySubtype, setPropertySubtype] = useState(data?.propertySubtype || '');
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState(data.title || '');
   const [selectedCategoryId, setSelectedCategoryId] = useState(data?.categoryId || '');
-  const [userProfile, setUserProfile] = useState({})
+  const [userProfile, setUserProfile] = useState({});
+  
   // Custom order for category sorting
   const customOrder = ["Plot", "Flat/Apartment", "IndependentHouse/Villa", "Land", "FarmHouse"];
+  const [autoSaveTimer, setAutoSaveTimer] = useState(null);
 
-// 🧩 Prefill once when data or categories change
-useEffect(() => {
-  if (!isEditMode || !data) return;
-  const rrr = localStorage.getItem("adminDetails");
-  setUserProfile(rrr)
-  
-  // Prefer nested category if available
-  const catName = data.category?.name?.trim() || data.propertySubtype?.trim() || '';
-  const catType = data.category?.catType?.toLowerCase() || data.propertyKind?.toLowerCase() || 'residential';
-
-  setListingType(data.marketType || 'Sale');
-  setPropertyType(catType);
-  setPropertySubtype(catName);
-  setTitle(data.title || '');
-  setSelectedCategoryId(data.categoryId || '');
-}, [isEditMode, data, categories]);
-  // 🧭 Fetch categories
+  // 🧩 Fetch categories on mount
   useEffect(() => {
     const fetchCategories = async () => {
       const clientToken = localStorage.getItem('token');
@@ -59,6 +44,15 @@ useEffect(() => {
   // 🧩 Prefill fields when editing existing property
   useEffect(() => {
     if (isEditMode && data) {
+      const userData = localStorage.getItem("adminDetails");
+      if (userData) {
+        try {
+          setUserProfile(JSON.parse(userData));
+        } catch (e) {
+          console.error("Error parsing user profile:", e);
+        }
+      }
+      
       setListingType(data.marketType || 'sale');
       setPropertyType(data.propertyKind || 'residential');
       setPropertySubtype(data.propertySubtype || '');
@@ -67,9 +61,51 @@ useEffect(() => {
     }
   }, [isEditMode, data]);
 
+  // 🧩 Auto-save function
+  const autoSaveData = () => {
+    if (autoSaveTimer) {
+      clearTimeout(autoSaveTimer);
+    }
+
+    const timer = setTimeout(() => {
+      const selectedCategory = categories.find(
+        (cat) => cat.id === selectedCategoryId || cat.name === propertySubtype
+      );
+
+      updateData({
+        categoryId: selectedCategory?.id || '',
+        propertyName: title,
+        title,
+        marketType: listingType,
+        propertyKind: propertyType,
+        propertySubtype,
+        catType: selectedCategory?.catType ||
+          (propertyType === 'residential' ? 'Residential' : 'Commercial'),
+      });
+
+      console.log("Auto-saved basic details");
+    }, 500); // 500ms debounce delay
+
+    setAutoSaveTimer(timer);
+  };
+
+  // 🧩 Trigger auto-save when relevant fields change
+  useEffect(() => {
+    if (propertySubtype && title) {
+      autoSaveData();
+    }
+    
+    // Cleanup timer on unmount
+    return () => {
+      if (autoSaveTimer) {
+        clearTimeout(autoSaveTimer);
+      }
+    };
+  }, [listingType, propertyType, propertySubtype, title, selectedCategoryId]);
+
   // 🏁 Handle Continue button
   const handleContinue = () => {
-    // Find selected category from backend data
+    // Ensure final save before proceeding
     const selectedCategory = categories.find(
       (cat) => cat.id === selectedCategoryId || cat.name === propertySubtype
     );
@@ -81,8 +117,7 @@ useEffect(() => {
       marketType: listingType,
       propertyKind: propertyType,
       propertySubtype,
-      catType:
-        selectedCategory?.catType ||
+      catType: selectedCategory?.catType ||
         (propertyType === 'residential' ? 'Residential' : 'Commercial'),
     });
 
@@ -156,7 +191,7 @@ useEffect(() => {
                 onChange={(e) => {
                   setPropertyType(e.target.value);
                   setPropertySubtype('');
-                  setCustomSubtype('');
+                  setSelectedCategoryId('');
                 }}
                 className="w-5 h-5 text-orange-500 focus:ring-orange-500"
               />
@@ -166,7 +201,6 @@ useEffect(() => {
         </div>
 
         {/* 🏘️ Property Subtypes */}
-        {/* 🏘️ Property Subtypes */}
         {loading ? (
           <p className="text-gray-500">Loading property types...</p>
         ) : (
@@ -174,8 +208,6 @@ useEffect(() => {
             {sortedSubtypes.map((subtype) => {
               const isActive =
                 propertySubtype?.toLowerCase().trim() === subtype.name?.toLowerCase().trim();
-
-              console.log(propertySubtype?.toLowerCase().trim(), "===", subtype.name?.toLowerCase().trim())
 
               return (
                 <button
@@ -196,11 +228,10 @@ useEffect(() => {
           </div>
         )}
 
-
         {/* 🏠 Property Title */}
         <div className="mt-4">
           <label className="block font-roboto text-base font-medium text-gray-700 mb-3">
-            {!isProject?"Property":"Project"} Title
+            {!isProject ? "Property" : "Project"} Title
           </label>
           <input
             type="text"
