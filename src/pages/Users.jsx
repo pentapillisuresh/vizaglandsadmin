@@ -1,12 +1,6 @@
 import { useState, useEffect } from "react";
 import UserDetails from "../components/UserDetails";
-import {
-  Search,
-  Users as UsersIcon,
-  Eye,
-  CheckCircle,
-  FileText,
-} from "lucide-react";
+import {Search,Users as UsersIcon,Eye,CheckCircle,FileText} from "lucide-react";
 import ApiService from "../hooks/ApiService";
 import { useLocation } from "react-router-dom";
 
@@ -72,23 +66,31 @@ export default function Users() {
         setLoading(false);
       }
     };
-
+    if (!role) return;
     fetchOwners();
-  }, []);
+  }, [role]);
 
   // 🔹 Filter logic
   const filteredUsers = users.filter((user) => {
+    const search = searchTerm.toLowerCase();
+  
+    const fullName = (user.fullName || "").toLowerCase();
+    const email = (user.email || "").toLowerCase();
+    const phone = (user.phone || "");
+  
     const matchesSearch =
-      user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())||
-      user.phone.toLowerCase().includes(searchTerm.toLowerCase());
+      fullName.includes(search) ||
+      email.includes(search) ||
+      phone.includes(searchTerm);
+  
     const matchesFilter =
       filter === "all" ||
       (filter === "active" && user.isActive) ||
       (filter === "inactive" && !user.isActive);
+  
     return matchesSearch && matchesFilter;
   });
-
+  
   // 🔹 Loading state
   if (loading) {
     return (
@@ -148,7 +150,7 @@ export default function Users() {
                     : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                   }`}
               >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
+                {status?.charAt(0).toUpperCase() + status.slice(1)}
               </button>
             ))}
           </div>
@@ -195,7 +197,7 @@ export default function Users() {
                           />
                         ) : (
                           <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold">
-                            {user.fullName.charAt(0).toUpperCase()}
+                            {user.fullName?.charAt(0).toUpperCase()}
                           </div>
                         )}
                         <div>

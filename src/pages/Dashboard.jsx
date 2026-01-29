@@ -74,7 +74,7 @@ export default function Dashboard() {
         }
       } catch (err) {
         console.error("Error fetching owners:", err);
-        setError("Failed to load data. Please try again.");
+        // setError("Failed to load data. Please try again.");
       } finally {
         setLoading(false);
       }

@@ -14,12 +14,12 @@ export default function Header() {
       <div className="flex items-center gap-6">
         {/* Notifications */}
         <div className="relative">
-          <button className="relative flex items-center justify-center p-2 rounded-lg hover:bg-gray-50 transition">
+          {/* <button className="relative flex items-center justify-center p-2 rounded-lg hover:bg-gray-50 transition">
             <Bell className="w-6 h-6 text-gray-700" />
             <span className="absolute top-1.5 right-1.5 bg-red-600 text-white text-[11px] font-semibold px-1.5 py-[1px] rounded-full leading-none">
               3
             </span>
-          </button>
+          </button> */}
         </div>
 
         {/* Profile */}
