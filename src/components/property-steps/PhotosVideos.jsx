@@ -6,19 +6,16 @@ const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
   const [dragActive, setDragActive] = useState(false);
   const existingPhotos = data.photos;
   const existingVideo = data.videos;
-  const existingVoiceOver = data.audio;
 
   const [formData, setFormData] = useState({
     photos: [],
     videos: null,
-    voiceOver: null,
   });
 
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState({
     photos: 0,
     videos: 0,
-    voice: 0,
   });
 
   const canvasRef = useRef(null);
@@ -83,14 +80,12 @@ const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
 
     const photoObjects = normalizedPhotos.map((url) => ({ url, isNew: false }));
     const videosObj = existingVideo ? { url: existingVideo, isNew: false } : null;
-    const voiceObj = existingVoiceOver ? { url: existingVoiceOver, isNew: false } : null;
 
     setFormData({
       photos: photoObjects,
       videos: videosObj,
-      voiceOver: voiceObj,
     });
-  }, [existingPhotos, existingVideo, existingVoiceOver]);
+  }, [existingPhotos, existingVideo]);
 
   // --- DRAG HANDLERS ---
   const handleDrag = (e) => {
@@ -150,14 +145,6 @@ const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
     }));
   };
 
-  const handleVoiceOverUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setFormData((prev) => ({
-      ...prev,
-      voiceOver: { file, preview: URL.createObjectURL(file), isNew: true },
-    }));
-  };
 
   const removePhoto = (idx) => {
     setFormData((prev) => ({
@@ -167,7 +154,6 @@ const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
   };
 
   const removeVideo = () => setFormData((prev) => ({ ...prev, videos: null }));
-  const removeVoiceOver = () => setFormData((prev) => ({ ...prev, voiceOver: null }));
 
   // --- Upload with Progress ---
   const uploadWithProgress = async (url, formData, type) => {
@@ -257,12 +243,11 @@ const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setUploading(true);
-    setProgress({ photos: 0, videos: 0, voice: 0 });
+    setProgress({ photos: 0, videos: 0});
 
     const adminToken = localStorage.getItem("token");
     let uploadedPhotoUrls = [];
     let uploadedVideoUrl = formData.videos?.url || null;
-    let uploadedVoiceUrl = formData.voiceOver?.url || null;
 
     try {
       // --- Upload photos ---
@@ -288,18 +273,9 @@ const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
         uploadedVideoUrl = res?.url;
       }
 
-      // --- Upload voice-over ---
-      if (formData.voiceOver?.isNew) {
-        const form = new FormData();
-        form.append("document", formData.voiceOver.file);
-        const res = await uploadWithProgress("/images/upload-document", form, "voice");
-        uploadedVoiceUrl = res?.url;
-      }
-
       const finalData = {
         photos: finalPhotoUrls,
         videos: uploadedVideoUrl,
-        audio: uploadedVoiceUrl,
       };
 
       console.log("✅ Final Uploaded Data:", finalData);
@@ -406,31 +382,6 @@ const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
               <div
                 className="bg-green-600 h-3 rounded-full"
                 style={{ width: `${progress.videos}%` }}
-              ></div>
-            </div>
-          )}
-        </div>
-
-        {/* --- Voice-over --- */}
-        <div>
-          <label className="cursor-pointer flex items-center gap-3 border-2 border-dashed rounded-lg px-5 py-4 bg-gray-50 hover:bg-gray-100">
-            <Upload className="w-5 h-5 text-green-500" />
-            <span className="text-gray-700 font-medium">Upload Voice-over</span>
-            <input type="file" accept="audio/*" className="hidden" onChange={handleVoiceOverUpload} />
-          </label>
-          {formData.voiceOver && (
-            <div className="flex items-center justify-between mt-3 bg-blue-50 px-4 py-3 rounded-lg max-w-md">
-              <audio controls src={formData.voiceOver.preview || formData.voiceOver.url} className="w-64" />
-              <button type="button" onClick={removeVoiceOver} className="text-red-500 hover:text-red-700">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-          {uploading && progress.voice > 0 && progress.voice < 100 && (
-            <div className="w-full max-w-md mt-3 bg-gray-200 rounded-full h-3">
-              <div
-                className="bg-purple-600 h-3 rounded-full"
-                style={{ width: `${progress.voice}%` }}
               ></div>
             </div>
           )}
