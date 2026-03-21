@@ -233,33 +233,32 @@ export default function Projects() {
     });
   };
 
-  const handleStatus = async (id, status) => {
-    try {
-      const adminToken = localStorage.getItem("token");
+ const handleStatus = async (id, status) => {
+  try {
+    const adminToken = localStorage.getItem("token");
 
-      const response = await ApiService.put(`/properties/${id}`, { status },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            'Content-Type': 'application/json'
-          }
-        },
-      )
+    const response = await ApiService.put(`/properties/${id}`, { status },
+      {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          'Content-Type': 'application/json'
+        }
+      },
+    )
 
-      if (response) {
-        navigate('./projects')
-      } else {
-        console.log("rrr::", response?.message)
-      }
-
-      setProjects((prev) =>
-        prev.map((p) => (p.id === editingProject.id ? data.project : p))
-      );
-      alert("Project updated successfully!");
-    } catch (err) {
-      alert(err.message);
+    if (response) {
+      // ✅ Remove the navigate line and just refresh the projects
+      fetchProjects(); // Refresh the project list
+      alert("Project status updated successfully!");
+    } else {
+      console.log("rrr::", response?.message)
+      alert("Failed to update project status");
     }
-  };
+  } catch (err) {
+    console.error("Error updating status:", err);
+    alert(err.message || "An error occurred while updating status");
+  }
+};
 
   const openEditModal = (project) => {
     setEditingProject(project);

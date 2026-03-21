@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, X, Video, MapPin, Upload, Edit } from "lucide-react";
+import { Plus, X, Video, MapPin, Upload, Edit, Trash2, Check, AlertCircle, Save } from "lucide-react";
 import ApiService from "../hooks/ApiService";
 
 const API_BASE = "http://localhost:3000/api";
@@ -16,7 +16,12 @@ const ContentManager = () => {
   const [loading, setLoading] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
-
+  const [localityInput, setLocalityInput] = useState("");
+  const [editLocalityInput, setEditLocalityInput] = useState("");
+  const [editingLocalityIndex, setEditingLocalityIndex] = useState(null);
+  const [editingLocalityValue, setEditingLocalityValue] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const [videoForm, setVideoForm] = useState({
     title: "",
@@ -69,7 +74,8 @@ const ContentManager = () => {
       }
     } catch (err) {
       console.error("Video upload error:", err);
-      alert("Failed to upload video.");
+      setErrorMessage("Failed to upload video.");
+      setTimeout(() => setErrorMessage(""), 3000);
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -87,8 +93,6 @@ const ContentManager = () => {
       formData.append("photo", videoForm.youtubeLink || videoForm.videoFileName);
       formData.append("status", "inactive");
 
-      // If you have a backend route for file upload, include videoForm.videoFile here
-      // formData.append("file", videoForm.videoFile);
       const adminToken = localStorage.getItem('token');
       if (editId) {
         // Update existing ad
@@ -102,6 +106,7 @@ const ContentManager = () => {
             "Content-Type": "application/json",
           },
         });
+        setSuccessMessage("Video updated successfully!");
       } else {
         // Create new ad
         await ApiService.post('/commercialAds', {
@@ -115,14 +120,17 @@ const ContentManager = () => {
             "Content-Type": "application/json",
           },
         });
-
+        setSuccessMessage("Video added successfully!");
       }
 
+      setTimeout(() => setSuccessMessage(""), 3000);
       resetForms();
       setActiveModal("");
       fetchVideos();
     } catch (error) {
       console.error("Error saving video:", error);
+      setErrorMessage("Failed to save video. Please try again.");
+      setTimeout(() => setErrorMessage(""), 3000);
     }
   };
 
@@ -143,7 +151,7 @@ const ContentManager = () => {
 
   const [cityForm, setCityForm] = useState({
     city: "",
-    locality: "",
+    locality: [], // Changed to array to support multiple localities
   });
 
   const fetchVideos = async () => {
@@ -172,9 +180,13 @@ const ContentManager = () => {
     if (!window.confirm("Are you sure you want to delete this video?")) return;
     try {
       await ApiService.delete(`/commercialAds/${id}`);
+      setSuccessMessage("Video deleted successfully!");
+      setTimeout(() => setSuccessMessage(""), 3000);
       fetchVideos();
     } catch (error) {
       console.error("Error deleting video:", error);
+      setErrorMessage("Failed to delete video.");
+      setTimeout(() => setErrorMessage(""), 3000);
     }
   };
 
@@ -184,9 +196,13 @@ const ContentManager = () => {
       await ApiService.put(`/commercialAds/${id}/status`, {
         status: "active",
       });
+      setSuccessMessage("Video activated successfully!");
+      setTimeout(() => setSuccessMessage(""), 3000);
       fetchVideos();
     } catch (error) {
       console.error("Error activating video:", error);
+      setErrorMessage("Failed to activate video.");
+      setTimeout(() => setErrorMessage(""), 3000);
     }
   };
 
@@ -215,8 +231,12 @@ const ContentManager = () => {
       videoFileName: "",
       youtubeLink: "",
     });
-    setCityForm({ city: "", village: "" });
+    setCityForm({ city: "", locality: [] });
     setEditId(null);
+    setLocalityInput("");
+    setEditLocalityInput("");
+    setEditingLocalityIndex(null);
+    setEditingLocalityValue("");
   };
 
   // 🔹 Handle City form change
@@ -225,76 +245,154 @@ const ContentManager = () => {
     setCityForm({ ...cityForm, [name]: value });
   };
 
+  // 🔹 Add locality to the array (for add modal)
+  const addLocality = () => {
+    if (localityInput.trim()) {
+      setCityForm({
+        ...cityForm,
+        locality: [...cityForm.locality, localityInput.trim()]
+      });
+      setLocalityInput("");
+    }
+  };
+
+  // 🔹 Add locality to edit array
+  const addEditLocality = () => {
+    if (editLocalityInput.trim()) {
+      setCityForm({
+        ...cityForm,
+        locality: [...cityForm.locality, editLocalityInput.trim()]
+      });
+      setEditLocalityInput("");
+    }
+  };
+
+  // 🔹 Start editing a locality
+  const startEditingLocality = (index) => {
+    setEditingLocalityIndex(index);
+    setEditingLocalityValue(cityForm.locality[index]);
+  };
+
+  // 🔹 Save edited locality
+  const saveEditedLocality = (index) => {
+    if (editingLocalityValue.trim()) {
+      const updatedLocalities = [...cityForm.locality];
+      updatedLocalities[index] = editingLocalityValue.trim();
+      setCityForm({
+        ...cityForm,
+        locality: updatedLocalities
+      });
+      setEditingLocalityIndex(null);
+      setEditingLocalityValue("");
+    } else {
+      setErrorMessage("Locality name cannot be empty");
+      setTimeout(() => setErrorMessage(""), 3000);
+    }
+  };
+
+  // 🔹 Cancel editing
+  const cancelEditing = () => {
+    setEditingLocalityIndex(null);
+    setEditingLocalityValue("");
+  };
+
+  // 🔹 Remove locality from array
+  const removeLocality = (indexToRemove) => {
+    setCityForm({
+      ...cityForm,
+      locality: cityForm.locality.filter((_, index) => index !== indexToRemove)
+    });
+  };
+
   // 🔹 Submit City form (POST)
   const handleCitySubmit = async (e) => {
     e.preventDefault();
+    if (cityForm.locality.length === 0) {
+      setErrorMessage("Please add at least one locality");
+      setTimeout(() => setErrorMessage(""), 3000);
+      return;
+    }
+    
     try {
       const adminToken = localStorage.getItem('token');
-      const res = await ApiService.post(`/city`, cityForm, {
+      const payload = {
+        city: cityForm.city,
+        locality: cityForm.locality
+      };
+      
+      await ApiService.post(`/city`, payload, {
         headers: {
           Authorization: `Bearer ${adminToken}`,
           "Content-Type": "application/json"
         }
       });
+      
+      setSuccessMessage("City added successfully!");
+      setTimeout(() => setSuccessMessage(""), 3000);
       await fetchCities(); // refresh list
       resetForms();
       setActiveModal("");
     } catch (error) {
       console.error("Error saving city:", error);
-      alert("Failed to save city. Check console for details.");
+      setErrorMessage("Failed to save city. Please try again.");
+      setTimeout(() => setErrorMessage(""), 3000);
     }
   };
 
   const handleEditCitySubmit = async (e) => {
+    e.preventDefault();
+    if (cityForm.locality.length === 0) {
+      setErrorMessage("Please add at least one locality");
+      setTimeout(() => setErrorMessage(""), 3000);
+      return;
+    }
+    
     const payload = {
       city: cityForm.city,
       id: editId,
       locality: cityForm.locality
-    }
-    e.preventDefault();
+    };
+    
     try {
       const adminToken = localStorage.getItem('token');
-      const res = await ApiService.put(`/city`, payload, {
+      await ApiService.put(`/city`, payload, {
         headers: {
           Authorization: `Bearer ${adminToken}`,
           "Content-Type": "application/json"
         }
       });
-      setIsActivCityeModal(false)
+      
+      setSuccessMessage("City updated successfully!");
+      setTimeout(() => setSuccessMessage(""), 3000);
+      setIsActivCityeModal(false);
       await fetchCities(); // refresh list
       resetForms();
       setActiveModal("");
     } catch (error) {
       console.error("Error saving city:", error);
-      alert("Failed to save city. Check console for details.");
+      setErrorMessage("Failed to update city. Please try again.");
+      setTimeout(() => setErrorMessage(""), 3000);
     }
   };
 
-  // 🔹 Delete location (just UI-level since no DELETE API provided)
+  // 🔹 Delete location
   const deleteLocation = async (id) => {
-    console.log("Deleting city with ID:", id);
-
     try {
       const adminToken = localStorage.getItem('token');
-
-      const res = await ApiService.delete(`/city/${id}`, {
+      await ApiService.delete(`/city/${id}`, {
         headers: {
           Authorization: `Bearer ${adminToken}`,
           "Content-Type": "application/json",
         },
       });
-
-      console.log("Delete response:", res);
-
-      // Refresh the city list after successful deletion
+      
+      setSuccessMessage("City deleted successfully!");
+      setTimeout(() => setSuccessMessage(""), 3000);
       await fetchCities();
-
-      // Optionally close modal or show a success message
-      // setIsDeleteCityModel(false);
-
     } catch (error) {
       console.error("Error deleting city:", error);
-      alert("Failed to delete city. Check console for details.");
+      setErrorMessage("Failed to delete city. Please try again.");
+      setTimeout(() => setErrorMessage(""), 3000);
     }
   };
 
@@ -302,14 +400,43 @@ const ContentManager = () => {
   const editLocation = (id) => {
     const loc = locations.find((l) => l.id === id);
     if (loc) {
-      setCityForm({ city: loc.city, locality: loc.locality });
+      // Handle both array and string locality formats
+      const localityArray = Array.isArray(loc.locality) 
+        ? loc.locality 
+        : loc.locality ? [loc.locality] : [];
+      
+      setCityForm({ 
+        city: loc.city, 
+        locality: [...localityArray] 
+      });
       setEditId(loc.id);
+      setEditLocalityInput("");
+      setEditingLocalityIndex(null);
       setIsActivCityeModal(true);
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
+      {/* Success/Error Messages */}
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-50 animate-slide-in">
+          <div className="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2">
+            <Check className="w-5 h-5" />
+            <span>{successMessage}</span>
+          </div>
+        </div>
+      )}
+      
+      {errorMessage && (
+        <div className="fixed top-4 right-4 z-50 animate-slide-in">
+          <div className="bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2">
+            <AlertCircle className="w-5 h-5" />
+            <span>{errorMessage}</span>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white shadow-md border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 py-6 flex justify-between items-center">
@@ -329,7 +456,7 @@ const ContentManager = () => {
               className={`${activeTab === "video"
                 ? "bg-blue-600 text-white"
                 : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                } px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 font-medium`}
+                } px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 font-medium transition-all duration-200`}
             >
               <Video className="w-5 h-5" /> Video
             </button>
@@ -338,7 +465,7 @@ const ContentManager = () => {
               className={`${activeTab === "city"
                 ? "bg-green-600 text-white"
                 : "bg-green-100 text-green-700 hover:bg-green-200"
-                } px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 font-medium`}
+                } px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 font-medium transition-all duration-200`}
             >
               <MapPin className="w-5 h-5" /> City
             </button>
@@ -357,7 +484,7 @@ const ContentManager = () => {
                   resetForms();
                   setActiveModal("video");
                 }}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 font-medium"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 font-medium transition-all duration-200"
               >
                 <Plus className="w-5 h-5" /> Add Video
               </button>
@@ -372,74 +499,83 @@ const ContentManager = () => {
               {loading ? (
                 <div className="text-center py-6 text-slate-500">Loading...</div>
               ) : (
-                <table className="w-full">
-                  <thead className="bg-slate-100">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">
-                        #
-                      </th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">
-                        Title
-                      </th>
-                      <th className="px-6 py-3 text-left">Description</th>
-                      <th className="px-6 py-3 text-left">Status</th>
-                      <th className="px-6 py-3 text-left">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {videos?.length === 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-slate-100">
                       <tr>
-                        <td colSpan="6" className="text-center py-6 text-slate-500">
-                          No ads found.
-                        </td>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">
+                          #
+                        </th>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">
+                          Title
+                        </th>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">
+                          Description
+                        </th>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">
+                          Action
+                        </th>
                       </tr>
-                    ) : (
-                      videos?.map((v, i) => (
-                        <tr key={v.id} className="hover:bg-slate-50">
-                          <td className="px-6 py-3">{i + 1}</td>
-                          <td className="px-6 py-3 font-medium">{v.name}</td>
-                          <td className="px-6 py-3 text-slate-600">
-                            {v.description || "—"}
-                          </td>
-
-                          <td className="px-6 py-3">
-                            <span
-                              className={`px-2 py-1 text-sm rounded-full ${v.status === "active"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-gray-100 text-gray-600"
-                                }`}
-                            >
-                              {v.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-3 flex gap-2">
-                            <button
-                              onClick={() => editVideo(v.id)}
-                              className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => deleteVideo(v.id)}
-                              className="text-red-600 hover:bg-red-50 p-2 rounded-lg"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-
-                            {v.status !== "active" && (
-                              <button
-                                onClick={() => activateVideo(v.id)}
-                                className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm"
-                              >
-                                Activate
-                              </button>
-                            )}
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {videos?.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="text-center py-6 text-slate-500">
+                            No ads found.
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        videos?.map((v, i) => (
+                          <tr key={v.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-6 py-3">{i + 1}</td>
+                            <td className="px-6 py-3 font-medium">{v.name}</td>
+                            <td className="px-6 py-3 text-slate-600">
+                              {v.description || "—"}
+                            </td>
+                            <td className="px-6 py-3">
+                              <span
+                                className={`px-2 py-1 text-sm rounded-full ${v.status === "active"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-gray-100 text-gray-600"
+                                  }`}
+                              >
+                                {v.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-3 flex gap-2">
+                              <button
+                                onClick={() => editVideo(v.id)}
+                                className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                                title="Edit"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => deleteVideo(v.id)}
+                                className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                title="Delete"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+
+                              {v.status !== "active" && (
+                                <button
+                                  onClick={() => activateVideo(v.id)}
+                                  className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm transition-colors"
+                                >
+                                  Activate
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           </div>
@@ -454,7 +590,7 @@ const ContentManager = () => {
                   resetForms();
                   setActiveModal("city");
                 }}
-                className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 font-medium"
+                className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 font-medium transition-all duration-200"
               >
                 <Plus className="w-5 h-5" /> Add City
               </button>
@@ -464,54 +600,65 @@ const ContentManager = () => {
               <div className="bg-slate-800 text-white px-6 py-4 text-lg font-semibold">
                 City List
               </div>
-              <table className="w-full">
-                <thead className="bg-slate-100">
-                  <tr>
-                    <th className="px-6 py-3 text-left">#</th>
-                    <th className="px-6 py-3 text-left">City</th>
-                    <th className="px-6 py-3 text-left">Localities</th>
-                    <th className="px-6 py-3 text-left">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {locations?.length === 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-100">
                     <tr>
-                      <td colSpan="4" className="text-center py-6 text-slate-500">
-                        No records found.
-                      </td>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">#</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">City</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Localities</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Action</th>
                     </tr>
-                  ) : (
-                    locations?.map((l, i) => (
-                      <tr key={l.id} className="hover:bg-slate-50">
-                        <td className="px-6 py-3">{i + 1}</td>
-                        <td className="px-6 py-3 font-semibold">{l.city}</td>
-                        <td className="px-6 py-3 text-slate-700">
-                          {Array.isArray(l.locality)
-                            ? l.locality.join(", ")
-                            : l.locality}
-                        </td>
-                        <td className="px-6 py-3 flex gap-2">
-                          <button
-                            onClick={() => editLocation(l.id)}
-                            className="text-green-600 hover:bg-green-50 p-2 rounded-lg"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setEditId(l.id)
-                              setIsDeleteCityModel(true)
-                            }}
-                            className="text-red-600 hover:bg-red-50 p-2 rounded-lg"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {locations?.length === 0 ? (
+                      <tr>
+                        <td colSpan="4" className="text-center py-6 text-slate-500">
+                          No records found.
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      locations?.map((l, i) => (
+                        <tr key={l.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-6 py-3">{i + 1}</td>
+                          <td className="px-6 py-3 font-semibold">{l.city}</td>
+                          <td className="px-6 py-3 text-slate-700">
+                            <div className="flex flex-wrap gap-1">
+                              {Array.isArray(l.locality) 
+                                ? l.locality.map((loc, idx) => (
+                                    <span key={idx} className="bg-gray-100 px-2 py-1 rounded-md text-sm">
+                                      {loc}
+                                    </span>
+                                  ))
+                                : <span className="bg-gray-100 px-2 py-1 rounded-md text-sm">{l.locality}</span>
+                              }
+                            </div>
+                          </td>
+                          <td className="px-6 py-3 flex gap-2">
+                            <button
+                              onClick={() => editLocation(l.id)}
+                              className="text-green-600 hover:bg-green-50 p-2 rounded-lg transition-colors"
+                              title="Edit"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditId(l.id);
+                                setIsDeleteCityModel(true);
+                              }}
+                              className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                              title="Delete"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
@@ -520,14 +667,14 @@ const ContentManager = () => {
       {/* Video Modal */}
       {activeModal === "video" && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
-            <div className="flex justify-between items-center border-b px-6 py-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b px-6 py-4 sticky top-0 bg-white">
               <h2 className="text-xl font-bold text-slate-800">
                 {editId ? "Edit Video Post" : "Add Video Post"}
               </h2>
               <button
                 onClick={() => setActiveModal("")}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -535,19 +682,20 @@ const ContentManager = () => {
             <form onSubmit={handleVideoSubmit} className="p-6 space-y-5">
               <div>
                 <label className="block font-semibold mb-2 text-slate-700">
-                  Title
+                  Title *
                 </label>
                 <input
                   name="title"
                   value={videoForm.title}
                   onChange={handleVideoChange}
                   required
-                  className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  placeholder="Enter video title"
                 />
               </div>
               <div>
                 <label className="block font-semibold mb-2 text-slate-700">
-                  Description
+                  Description *
                 </label>
                 <textarea
                   name="description"
@@ -556,6 +704,7 @@ const ContentManager = () => {
                   rows="3"
                   required
                   className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                  placeholder="Enter video description"
                 />
               </div>
 
@@ -594,7 +743,7 @@ const ContentManager = () => {
                     />
                     <label
                       htmlFor="videoFile"
-                      className="flex items-center justify-center gap-2 border-2 border-dashed border-slate-300 rounded-lg px-4 py-4 cursor-pointer hover:border-blue-500 hover:bg-blue-50"
+                      className="flex items-center justify-center gap-2 border-2 border-dashed border-slate-300 rounded-lg px-4 py-4 cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all"
                     >
                       <Upload className="w-5 h-5 text-slate-500" />
                       <span className="text-slate-600">
@@ -619,7 +768,7 @@ const ContentManager = () => {
                 <button
                   type="button"
                   onClick={() => setActiveModal("")}
-                  className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-3 rounded-lg font-medium"
+                  className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-3 rounded-lg font-medium transition-colors"
                   disabled={uploading}
                 >
                   Cancel
@@ -627,7 +776,7 @@ const ContentManager = () => {
                 <button
                   type="submit"
                   disabled={uploading}
-                  className={`flex-1 py-3 rounded-lg font-medium shadow-lg ${uploading
+                  className={`flex-1 py-3 rounded-lg font-medium shadow-lg transition-all ${uploading
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-blue-600 hover:bg-blue-700 text-white"
                     }`}
@@ -644,17 +793,20 @@ const ContentManager = () => {
         </div>
       )}
 
-      {/* City Modal */}
+      {/* City Modal - Add New City */}
       {activeModal === "city" && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
-            <div className="flex justify-between items-center border-b px-6 py-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b px-6 py-4 sticky top-0 bg-white">
               <h2 className="text-xl font-bold text-slate-800">
-                {editId ? "Add Locality to City" : "Add City"}
+                Add New City
               </h2>
               <button
-                onClick={() => setActiveModal("")}
-                className="text-slate-400 hover:text-slate-600"
+                onClick={() => {
+                  setActiveModal("");
+                  resetForms();
+                }}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -662,41 +814,90 @@ const ContentManager = () => {
             <form onSubmit={handleCitySubmit} className="p-6 space-y-5">
               <div>
                 <label className="block font-semibold mb-2 text-slate-700">
-                  City Name
+                  City Name *
                 </label>
                 <input
                   name="city"
                   value={cityForm.city}
                   onChange={handleCityChange}
                   required
-                  className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none"
+                  className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all"
+                  placeholder="Enter city name"
                 />
               </div>
+              
               <div>
                 <label className="block font-semibold mb-2 text-slate-700">
-                  Locality
+                  Localities *
                 </label>
-                <input
-                  name="locality"
-                  value={cityForm.locality}
-                  onChange={handleCityChange}
-                  required
-                  className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none"
-                />
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={localityInput}
+                    onChange={(e) => setLocalityInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addLocality();
+                      }
+                    }}
+                    className="flex-1 border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all"
+                    placeholder="Enter locality name and press Enter or click Add"
+                  />
+                  <button
+                    type="button"
+                    onClick={addLocality}
+                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-all font-medium"
+                  >
+                    <Plus className="w-5 h-5" /> Add
+                  </button>
+                </div>
+                
+                {/* Localities List */}
+                {cityForm.locality.length > 0 && (
+                  <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                    <p className="text-sm text-slate-600 mb-3">Added Localities:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {cityForm.locality.map((loc, index) => (
+                        <div
+                          key={index}
+                          className="bg-white border border-slate-200 rounded-lg px-3 py-2 flex items-center gap-2 shadow-sm hover:shadow-md transition-all"
+                        >
+                          <span className="text-slate-700">{loc}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeLocality(index)}
+                            className="text-red-500 hover:text-red-700 transition-colors"
+                            title="Remove locality"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {cityForm.locality.length === 0 && (
+                  <p className="text-sm text-amber-600 mt-2">Please add at least one locality</p>
+                )}
               </div>
+              
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setActiveModal("")}
-                  className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-3 rounded-lg font-medium"
+                  onClick={() => {
+                    setActiveModal("");
+                    resetForms();
+                  }}
+                  className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-3 rounded-lg font-medium transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium shadow-lg"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium shadow-lg transition-all"
                 >
-                  {editId ? "Add Locality" : "Add City"}
+                  Add City
                 </button>
               </div>
             </form>
@@ -704,90 +905,226 @@ const ContentManager = () => {
         </div>
       )}
 
+      {/* Edit City Modal - With Inline Editing for Localities */}
       {isActivCityeModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
-            <div className="flex justify-between items-center border-b px-6 py-4">
-              <h2 className="text-xl font-bold text-slate-800">
-                Edit City or Locality
-              </h2>
+          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b px-6 py-4 sticky top-0 bg-white">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-800">
+                  Edit City & Localities
+                </h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  Update city name and manage localities
+                </p>
+              </div>
               <button
-                onClick={() => setIsActivCityeModal(false)}
-                className="text-slate-400 hover:text-slate-600"
+                onClick={() => {
+                  setIsActivCityeModal(false);
+                  resetForms();
+                }}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
-            <form onSubmit={handleEditCitySubmit} className="p-6 space-y-5">
-              <div>
+            
+            <form onSubmit={handleEditCitySubmit} className="p-6 space-y-6">
+              {/* City Name Section */}
+              <div className="bg-blue-50 rounded-lg p-4">
                 <label className="block font-semibold mb-2 text-slate-700">
-                  City Name
+                  City Name *
                 </label>
                 <input
                   name="city"
                   value={cityForm.city}
                   onChange={handleCityChange}
                   required
-                  className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none"
+                  className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all bg-white"
+                  placeholder="Enter city name"
                 />
+                <p className="text-xs text-slate-500 mt-1">This is the main city name</p>
               </div>
+              
+              {/* Localities Section */}
               <div>
                 <label className="block font-semibold mb-2 text-slate-700">
-                  Locality
+                  Localities *
                 </label>
-                <input
-                  name="locality"
-                  value={cityForm.locality}
-                  onChange={handleCityChange}
-                  required
-                  className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none"
-                />
+                <div className="bg-gray-50 rounded-lg p-4">
+                  {/* Add New Locality Input */}
+                  <div className="flex gap-2 mb-4">
+                    <input
+                      type="text"
+                      value={editLocalityInput}
+                      onChange={(e) => setEditLocalityInput(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addEditLocality();
+                        }
+                      }}
+                      className="flex-1 border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all bg-white"
+                      placeholder="Enter new locality name"
+                    />
+                    <button
+                      type="button"
+                      onClick={addEditLocality}
+                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-all font-medium"
+                    >
+                      <Plus className="w-5 h-5" /> Add Locality
+                    </button>
+                  </div>
+                  
+                  {/* Existing Localities List with Edit/Delete Options */}
+                  {cityForm.locality.length > 0 ? (
+                    <div>
+                      <p className="text-sm font-medium text-slate-700 mb-3">
+                        Current Localities ({cityForm.locality.length}):
+                      </p>
+                      <div className="space-y-2">
+                        {cityForm.locality.map((loc, index) => (
+                          <div
+                            key={index}
+                            className="bg-white border border-slate-200 rounded-lg p-3 hover:shadow-md transition-all"
+                          >
+                            {editingLocalityIndex === index ? (
+                              // Edit Mode
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={editingLocalityValue}
+                                  onChange={(e) => setEditingLocalityValue(e.target.value)}
+                                  onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      saveEditedLocality(index);
+                                    }
+                                  }}
+                                  className="flex-1 border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 outline-none"
+                                  autoFocus
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => saveEditedLocality(index)}
+                                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                                  title="Save"
+                                >
+                                  <Save className="w-4 h-4" /> Save
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={cancelEditing}
+                                  className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                                  title="Cancel"
+                                >
+                                  <X className="w-4 h-4" /> Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              // View Mode
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-700 flex-1">{loc}</span>
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => startEditingLocality(index)}
+                                    className="text-blue-500 hover:text-blue-700 p-1 transition-colors"
+                                    title="Edit locality"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeLocality(index)}
+                                    className="text-red-500 hover:text-red-700 p-1 transition-colors"
+                                    title="Delete locality"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 bg-white rounded-lg border-2 border-dashed border-slate-200">
+                      <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-2" />
+                      <p className="text-amber-600 font-medium">No localities added</p>
+                      <p className="text-sm text-slate-500 mt-1">Please add at least one locality above</p>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="flex gap-3 pt-4">
+              
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t">
                 <button
                   type="button"
-                  onClick={() => setIsActivCityeModal(false)}
-                  className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-3 rounded-lg font-medium"
+                  onClick={() => {
+                    setIsActivCityeModal(false);
+                    resetForms();
+                  }}
+                  className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-3 rounded-lg font-medium transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium shadow-lg"
+                  disabled={cityForm.locality.length === 0}
+                  className={`flex-1 py-3 rounded-lg font-medium shadow-lg transition-all ${
+                    cityForm.locality.length === 0
+                      ? "bg-gray-300 cursor-not-allowed text-gray-500"
+                      : "bg-green-600 hover:bg-green-700 text-white"
+                  }`}
                 >
-                  Edit City
+                  Update City
                 </button>
               </div>
+              
+              {/* Info Message */}
+              {cityForm.locality.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-700 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    You have {cityForm.locality.length} locality(ies) for this city. Click the edit icon to modify or trash icon to delete.
+                  </p>
+                </div>
+              )}
             </form>
           </div>
         </div>
       )}
+      
+      {/* Delete Confirmation Modal */}
       {isDeleteCityModel && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 relative">
-            {/* Close button (top-right corner) */}
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 relative animate-fade-in">
             <button
               onClick={() => setIsDeleteCityModel(false)}
-              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl"
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl transition-colors"
             >
               ✕
             </button>
 
-            {/* Header */}
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              Delete City & Localities
-            </h2>
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                Delete City & Localities
+              </h2>
+              <p className="text-gray-600 text-sm mb-6">
+                Are you sure you want to delete this city and all its localities? This action cannot be undone.
+              </p>
+            </div>
 
-            {/* Message */}
-            <p className="text-gray-600 text-sm mb-6">
-              Are you sure you want to delete this city and its localities?
-            </p>
-
-            {/* Action buttons */}
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setIsDeleteCityModel(false)}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition"
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
@@ -796,7 +1133,7 @@ const ContentManager = () => {
                   deleteLocation(editId);
                   setIsDeleteCityModel(false);
                 }}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
               >
                 Yes, Delete
               </button>

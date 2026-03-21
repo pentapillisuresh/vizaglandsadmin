@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, UserCog, Building2, Home, Clock, CheckCircle, XCircle, Eye, MessageSquare } from "lucide-react";
+import { Users, UserCog, Building2, Home, Clock, CheckCircle, XCircle, Eye, MessageSquare, FolderKanban, TrendingUp, Calendar } from "lucide-react";
 import ApiService from "../hooks/ApiService";
 import LeadItem from "../components/LeadItem";
 import LeadDetailModal from "../components/LeadDetailModal";
@@ -178,8 +178,8 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* 🧮 Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* Row 1: Owners, Agents, Builders, Properties, Projects */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         {/* Owners */}
         <div
           onClick={() => {
@@ -200,7 +200,8 @@ export default function Dashboard() {
         <div
           onClick={() => {
             navigate("/users", { state: { role: "agent" } })
-          }} className="cursor-pointer bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg hover:scale-[1.03] transition-transform"
+          }} 
+          className="cursor-pointer bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg hover:scale-[1.03] transition-transform"
         >
           <div className="flex items-center justify-between mb-4">
             <UserCog className="w-8 h-8 opacity-80" />
@@ -243,89 +244,157 @@ export default function Dashboard() {
             {stats.verifiedProperties} Verified
           </div>
         </div>
+
+        {/* Projects */}
         <div
-          onClick={() => handleNavigate("/properties")}
-          className="cursor-pointer bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg hover:scale-[1.03] transition-transform"
+          onClick={() => handleNavigate("/projects")}
+          className="cursor-pointer bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl p-6 text-white shadow-lg hover:scale-[1.03] transition-transform"
         >
           <div className="flex items-center justify-between mb-4">
-            <Home className="w-8 h-8 opacity-80" />
+            <FolderKanban className="w-8 h-8 opacity-80" />
             <div className="text-right">
               <p className="text-sm opacity-90">Total Projects</p>
               <p className="text-3xl font-bold">{stats.totalProjects}</p>
             </div>
           </div>
           <div className="text-xs opacity-90">
-            {stats.verifiedProperties} Verified
+            Active Projects
           </div>
         </div>
       </div>
 
-      {/* 📊 Additional Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" >
+      {/* Row 2: Total Views, Total Leads, Total Inquiries, Verified Properties, Monthly Views */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         {/* Total Views */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm" onClick={() => {
-          console.log("property::",)
-          setShowProperty(true);
-          setShowLeads(false);
-        }}>
-          <div className="flex items-center gap-3 mb-3">
-            <Eye className="w-6 h-6 text-blue-600" />
-            <div>
-              <p className="text-sm text-gray-500">Total Views</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {stats.totalViews}
-              </p>
+        <div 
+          className="cursor-pointer bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl p-6 text-white shadow-lg hover:scale-[1.03] transition-transform"
+          onClick={() => {
+            console.log("property::",)
+            setShowProperty(true);
+            setShowLeads(false);
+          }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <Eye className="w-8 h-8 opacity-80" />
+            <div className="text-right">
+              <p className="text-sm opacity-90">Total Views</p>
+              <p className="text-3xl font-bold">{stats.totalViews}</p>
             </div>
           </div>
-          <div className="text-xs text-gray-500">
-            {stats.totalThisMonthViews} views this month
+          <div className="text-xs opacity-90">
+            All time views
           </div>
         </div>
 
         {/* Total Leads */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm" onClick={() => {
-          console.log("lead")
-          setShowProperty(false)
-          setShowLeads(true)
-        }}>
-          <div className="flex items-center gap-3 mb-3">
-            <UserCog className="w-6 h-6 text-green-600" />
-            <div>
-              <p className="text-sm text-gray-500">Total Leads</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {stats.totalLeads}
-              </p>
+        <div 
+          className="cursor-pointer bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-6 text-white shadow-lg hover:scale-[1.03] transition-transform"
+          onClick={() => {
+            console.log("lead")
+            setShowProperty(false)
+            setShowLeads(true)
+          }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <UserCog className="w-8 h-8 opacity-80" />
+            <div className="text-right">
+              <p className="text-sm opacity-90">Total Leads</p>
+              <p className="text-3xl font-bold">{stats.totalLeads}</p>
             </div>
           </div>
-          <div className="text-xs text-gray-500">New leads generated</div>
+          <div className="text-xs opacity-90">New leads generated</div>
         </div>
 
-        {/* Inquiries */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-3">
-            <MessageSquare className="w-6 h-6 text-purple-600" />
-            <div>
-              <p className="text-sm text-gray-500">Total Inquiries</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {stats.totalInquiries}
-              </p>
+        {/* Total Inquiries */}
+        <div 
+          className="cursor-pointer bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl p-6 text-white shadow-lg hover:scale-[1.03] transition-transform"
+          onClick={() => {
+            console.log("inquiries")
+          }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <MessageSquare className="w-8 h-8 opacity-80" />
+            <div className="text-right">
+              <p className="text-sm opacity-90">Total Inquiries</p>
+              <p className="text-3xl font-bold">{stats.totalInquiries}</p>
             </div>
           </div>
-          <div className="text-xs text-gray-500">Customer property inquiries</div>
+          <div className="text-xs opacity-90">Customer property inquiries</div>
         </div>
 
         {/* Verified Properties */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-3">
-            <CheckCircle className="w-6 h-6 text-green-600" />
-            <div>
-              <p className="text-sm text-gray-500">Verified Properties</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {stats.verifiedProperties}
+        <div 
+          className="cursor-pointer bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl p-6 text-white shadow-lg hover:scale-[1.03] transition-transform"
+          onClick={() => handleNavigate("/properties")}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <CheckCircle className="w-8 h-8 opacity-80" />
+            <div className="text-right">
+              <p className="text-sm opacity-90">Verified Properties</p>
+              <p className="text-3xl font-bold">{stats.verifiedProperties}</p>
+            </div>
+          </div>
+          <div className="text-xs opacity-90">Approved and live listings</div>
+        </div>
+
+        {/* Monthly Views */}
+        <div 
+          className="cursor-pointer bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl p-6 text-white shadow-lg hover:scale-[1.03] transition-transform"
+          onClick={() => {
+            console.log("monthly views")
+          }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <TrendingUp className="w-8 h-8 opacity-80" />
+            <div className="text-right">
+              <p className="text-sm opacity-90">This Month Views</p>
+              <p className="text-3xl font-bold">{stats.totalThisMonthViews}</p>
+            </div>
+          </div>
+          <div className="text-xs opacity-90">Views in current month</div>
+        </div>
+      </div>
+
+      {/* Row 3: Recent Activity or Additional Stats (if needed) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {/* Pending Approvals - Example additional card */}
+        <div className="bg-gradient-to-br from-slate-500 to-slate-600 rounded-xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <Clock className="w-8 h-8 opacity-80" />
+            <div className="text-right">
+              <p className="text-sm opacity-90">Pending Approvals</p>
+              <p className="text-3xl font-bold">
+                {dashboardData.properties?.filter(p => p.status === "pending").length || 0}
               </p>
             </div>
           </div>
-          <div className="text-xs text-gray-500">Approved and live listings</div>
+          <div className="text-xs opacity-90">Properties awaiting verification</div>
+        </div>
+
+        {/* Total Revenue - Placeholder */}
+        <div className="bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <TrendingUp className="w-8 h-8 opacity-80" />
+            <div className="text-right">
+              <p className="text-sm opacity-90">Total Revenue</p>
+              <p className="text-3xl font-bold">₹0</p>
+            </div>
+          </div>
+          <div className="text-xs opacity-90">Coming soon</div>
+        </div>
+
+        {/* Active Listings */}
+        <div className="bg-gradient-to-br from-rose-500 to-rose-600 rounded-xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <Home className="w-8 h-8 opacity-80" />
+            <div className="text-right">
+              <p className="text-sm opacity-90">Active Listings</p>
+              <p className="text-3xl font-bold">
+                {dashboardData.properties?.filter(p => p.status === "verified").length || 0}
+              </p>
+            </div>
+          </div>
+          <div className="text-xs opacity-90">Currently active properties</div>
         </div>
       </div>
 
@@ -367,7 +436,6 @@ export default function Dashboard() {
                         alt={property.title}
                         className="w-12 h-12 rounded-lg object-cover"
                       />
-
                       <div>
                         <p className="text-sm font-medium text-gray-900">
                           {property.title}
@@ -394,7 +462,7 @@ export default function Dashboard() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                  {property.client?.role || "N/A"}
+                    {property.client?.role || "N/A"}
                   </td>
                 </tr>
               ))}
@@ -402,6 +470,7 @@ export default function Dashboard() {
           </table>
         </div>
       </div>}
+      
       {showLeads && <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">
@@ -418,9 +487,9 @@ export default function Dashboard() {
               getPriorityBadge={getPriorityBadge}
             />
           ))}
-
         </div>
       </div>}
+      
       {showDetailModal && selectedLead && (
         <LeadDetailModal
           lead={selectedLead}

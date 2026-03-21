@@ -243,38 +243,36 @@ export default function Properties() {
     }
   };
 
-  const handleUpdateProperty = async (formData) => {
-    console.log("from::", formData)
+ const handleUpdateProperty = async (formData) => {
+  console.log("from::", formData)
 
-    try {
-      const adminToken = localStorage.getItem("token");
+  try {
+    const adminToken = localStorage.getItem("token");
 
-      const response = await ApiService.put(`/properties/${formData.id}`, formData,
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            'Content-Type': 'application/json'
-          }
-        },
-      )
+    const response = await ApiService.put(`/properties/${formData.id}`, formData,
+      {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          'Content-Type': 'application/json'
+        }
+      },
+    )
 
-      if (response) {
-        setShowEditModal(false);
-        navigate('./properties')
-      } else {
-        console.log("rrr::", response?.message)
-      }
-
-      setProperties((prev) =>
-        prev.map((p) => (p.id === editingProperty.id ? response.property : p))
-      );
+    if (response) {
       setShowEditModal(false);
-      setEditingProperty(null);
+      // ✅ Remove navigate and just refresh
+      fetchProperties(); // Refresh the property list
       alert("Property updated successfully!");
-    } catch (err) {
-      alert(err.message);
+    } else {
+      console.log("rrr::", response?.message)
+      alert("Failed to update property");
     }
-  };
+  } catch (err) {
+    console.error("Error updating property:", err);
+    alert(err.message || "An error occurred while updating property");
+  }
+};
+
   const handleEdit = (listing) => {
     navigate(`/post-property?edit=${listing.id}`, {
       state: {
@@ -285,33 +283,32 @@ export default function Properties() {
     });    // setShowEditModal(true);
   };
 
-  const handleStatus = async (id, status) => {
-    try {
-      const adminToken = localStorage.getItem("token");
+ const handleStatus = async (id, status) => {
+  try {
+    const adminToken = localStorage.getItem("token");
 
-      const response = await ApiService.put(`/properties/${id}`, { status },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            'Content-Type': 'application/json'
-          }
-        },
-      )
+    const response = await ApiService.put(`/properties/${id}`, { status },
+      {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          'Content-Type': 'application/json'
+        }
+      },
+    )
 
-      if (response) {
-        navigate('./properties')
-      } else {
-        console.log("rrr::", response?.message)
-      }
-
-      setProperties((prev) =>
-        prev.map((p) => (p.id === editingProperty.id ? data.property : p))
-      );
-      alert("Property updated successfully!");
-    } catch (err) {
-      alert(err.message);
+    if (response) {
+      // ✅ Remove the navigate line and just refresh the properties
+      fetchProperties(); // Refresh the property list
+      alert("Property status updated successfully!");
+    } else {
+      console.log("rrr::", response?.message)
+      alert("Failed to update property status");
     }
-  };
+  } catch (err) {
+    console.error("Error updating status:", err);
+    alert(err.message || "An error occurred while updating status");
+  }
+};
 
   const openEditModal = (property) => {
     setEditingProperty(property);
