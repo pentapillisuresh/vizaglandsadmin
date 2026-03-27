@@ -18,58 +18,90 @@ export default function Projects() {
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const navigate = useNavigate();
-  // ✅ Fetch projects from API
+
+  // ✅ Fetch all projects from API with no limit
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const res = await ApiService.get("/properties/getAllProjects", {
+      setError("");
+      
+      const adminToken = localStorage.getItem("token");
+      
+      // Fetch all projects with high limit or handle pagination
+      const res = await ApiService.get("/properties/getAllProjects?limit=1000", {
         headers: {
-          // Authorization: `Bearer ${adminToken}`,
-          "Content-Type": "application/json'"
+          Authorization: `Bearer ${adminToken}`,
+          "Content-Type": "application/json"
         }
+      });
+      
+      // Handle different response structures
+      let allProjects = [];
+      if (res && Array.isArray(res)) {
+        allProjects = res;
+      } else if (res && res.projects && Array.isArray(res.projects)) {
+        allProjects = res.projects;
+      } else if (res && res.properties && Array.isArray(res.properties)) {
+        allProjects = res.properties;
+      } else if (res && res.data && Array.isArray(res.data)) {
+        allProjects = res.data;
+      } else {
+        console.error("Unexpected response structure:", res);
+        allProjects = [];
       }
-      );
-      setProjects(res.properties || []);
+      
+      setProjects(allProjects);
     } catch (err) {
-      console.error(err);
-      setError("Failed to load projects. Please try again later.");
+      console.error("Error fetching projects:", err);
+      setError(err.response?.data?.message || "Failed to load projects. Please try again later.");
     } finally {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     fetchProjects();
   }, []);
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Invalid Date";
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch (error) {
+      return "N/A";
+    }
   };
 
   // ✅ Local filtering logic
   const filteredProjects = projects?.filter((project) => {
+    if (!project) return false;
+    
     const matchesSearch =
       project.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.address?.city?.toLowerCase().includes(searchTerm.toLowerCase());
+      project.address?.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.address?.locality?.toLowerCase().includes(searchTerm.toLowerCase());
+    
     const matchesFilter =
       filter === "all" ||
       (filter === "pending" && project.status === "pending") ||
       (filter === "rejected" && project.status === "rejected") ||
       (filter === "verified" && project.status === "verified") ||
+      (filter === "approved" && (project.status === "verified" || project.status === "approved")) ||
       (filter === "sold" && project.isSold === true) ||
       (filter === "owner" && project?.client?.role === 'owner') ||
       (filter === "agent" && project?.client?.role === 'agent') ||
       (filter === "builder" && project?.client?.role === 'builder');
+    
     return matchesSearch && matchesFilter;
   });
 
   const handleWishlistClick = async (projectId, projectStatus, isActive) => {
     if (projectStatus === "verified" || projectStatus === "approved") {
-      // Toggle wishlist state locally
       setWishlistedProjects((prev) => ({
         ...prev,
         [projectId]: !prev[projectId],
@@ -83,7 +115,6 @@ export default function Projects() {
         return;
       }
 
-      // Make API request
       const response = await ApiService.put(
         `/properties/${projectId}`,
         { isActive },
@@ -94,19 +125,14 @@ export default function Projects() {
           },
         }
       );
+      
       if (response) {
-        // Show notification when project is made live 
         if (!wishlistedProjects[projectId]) {
           setNotificationMessage("Project is Live");
           setShowNotification(true);
           setTimeout(() => setShowNotification(false), 3000);
         }
-        fetchProjects()
-        // Optional: reload or refetch data
-        // window.location.reload(); // reloads the current page
-        // OR ideally: refetch data instead of reloading
-        // fetchProjects();
-
+        await fetchProjects();
         console.log("Project updated successfully!");
       } else {
         console.error("Error updating project:", response?.message);
@@ -114,7 +140,7 @@ export default function Projects() {
       }
     } catch (err) {
       console.error("Error:", err);
-      alert(err.message || "An unexpected error occurred.");
+      alert(err.response?.data?.message || err.message || "An unexpected error occurred.");
     }
   };
 
@@ -129,13 +155,14 @@ export default function Projects() {
         await ApiService.delete(`/properties/${id}`, {
           headers: {
             Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "application/json'"
+            "Content-Type": "application/json"
           }
         });
-        setProjects((prev) => prev.filter((p) => p.id !== id));
+        await fetchProjects();
         alert("Project deleted successfully!");
       } catch (err) {
-        alert("Failed to delete project.");
+        console.error("Error deleting project:", err);
+        alert(err.response?.data?.message || "Failed to delete project.");
       }
     }
   };
@@ -143,7 +170,7 @@ export default function Projects() {
   const handleSold = async (id) => {
     if (
       window.confirm(
-        "Are you sure you want to make as SOLD this project? This action cannot be undone."
+        "Are you sure you want to mark this project as SOLD? This action cannot be undone."
       )
     ) {
       const adminToken = localStorage.getItem('token');
@@ -151,15 +178,16 @@ export default function Projects() {
         const res = await ApiService.put(`/properties/${id}`, { isSold: true }, {
           headers: {
             Authorization: `Bearer ${adminToken}`,
-            "Content-Type": "application/json'"
+            "Content-Type": "application/json"
           }
         });
         if (res) {
-          alert("Project update isSold successfully!");
+          alert("Project marked as sold successfully!");
+          await fetchProjects();
         }
-        fetchProjects()
       } catch (err) {
-        alert("Failed to delete project.");
+        console.error("Error marking project as sold:", err);
+        alert(err.response?.data?.message || "Failed to mark project as sold.");
       }
     }
   };
@@ -167,8 +195,11 @@ export default function Projects() {
   const handleAddProject = async (formData) => {
     const adminToken = localStorage.getItem("token");
     const adminClientData = localStorage.getItem("adminClientData");
-    formData.clientId = adminClientData.id;
+    
     try {
+      const clientData = adminClientData ? JSON.parse(adminClientData) : null;
+      formData.clientId = clientData?.id;
+      
       const res = await ApiService.post("/properties/admin-property", formData, {
         headers: {
           Authorization: `Bearer ${adminToken}`,
@@ -176,89 +207,80 @@ export default function Projects() {
         },
       });
 
-      const data = res.project;
-
-      if (!res || res.status !== 200) {
-        throw new Error(data?.message || "Failed to add project");
+      if (res && (res.status === 200 || res.status === 201)) {
+        setShowAddModal(false);
+        await fetchProjects();
+        alert("Project added successfully!");
+      } else {
+        throw new Error(res?.message || "Failed to add project");
       }
-
-      setShowEditModal(false);
-      window.location.reload()
-      alert("Project added successfully!");
     } catch (err) {
       console.error("Error adding project:", err);
-      alert(err.message || "An error occurred while adding the project.");
+      alert(err.response?.data?.message || err.message || "An error occurred while adding the project.");
     }
   };
 
   const handleUpdateProject = async (formData) => {
-    console.log("from::", formData)
+    console.log("Updating project:", formData);
 
     try {
       const adminToken = localStorage.getItem("token");
 
-      const response = await ApiService.put(`/properties/${formData.id}`, formData,
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-            'Content-Type': 'application/json'
-          }
-        },
-      )
-
-      if (response) {
-        setShowEditModal(false);
-        navigate('./projects')
-      } else {
-        console.log("rrr::", response?.message)
-      }
-
-      setProjects((prev) =>
-        prev.map((p) => (p.id === editingProject.id ? response.project : p))
-      );
-      setShowEditModal(false);
-      setEditingProject(null);
-      alert("Project updated successfully!");
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-  const handleEdit = (listing) => {
-    navigate(`/post-property?edit=${listing.id}`, {
-      state: {
-        listing, // or any other data you want to send
-        mode: 'edit',
-        isProject: true   // 👈 pass boolean here
-      },
-    });
-  };
-
- const handleStatus = async (id, status) => {
-  try {
-    const adminToken = localStorage.getItem("token");
-
-    const response = await ApiService.put(`/properties/${id}`, { status },
-      {
+      const response = await ApiService.put(`/properties/${formData.id}`, formData, {
         headers: {
           Authorization: `Bearer ${adminToken}`,
           'Content-Type': 'application/json'
         }
-      },
-    )
+      });
 
-    if (response) {
-      // ✅ Remove the navigate line and just refresh the projects
-      fetchProjects(); // Refresh the project list
-      alert("Project status updated successfully!");
-    } else {
-      console.log("rrr::", response?.message)
-      alert("Failed to update project status");
+      if (response) {
+        setShowEditModal(false);
+        setEditingProject(null);
+        await fetchProjects();
+        alert("Project updated successfully!");
+      } else {
+        console.log("Error updating project:", response?.message);
+        alert("Failed to update project");
+      }
+    } catch (err) {
+      console.error("Error updating project:", err);
+      alert(err.response?.data?.message || err.message || "An error occurred while updating project");
     }
-  } catch (err) {
-    console.error("Error updating status:", err);
-    alert(err.message || "An error occurred while updating status");
-  }
-};
+  };
+
+  const handleEdit = (listing) => {
+    navigate(`/post-property?edit=${listing.id}`, {
+      state: {
+        listing,
+        mode: 'edit',
+        isProject: true
+      },
+    });
+  };
+
+  const handleStatus = async (id, status) => {
+    try {
+      const adminToken = localStorage.getItem("token");
+
+      const response = await ApiService.put(`/properties/${id}`, { status }, {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response) {
+        await fetchProjects();
+        alert("Project status updated successfully!");
+      } else {
+        console.log("Error updating status:", response?.message);
+        alert("Failed to update project status");
+      }
+    } catch (err) {
+      console.error("Error updating status:", err);
+      alert(err.response?.data?.message || err.message || "An error occurred while updating status");
+    }
+  };
 
   const openEditModal = (project) => {
     setEditingProject(project);
@@ -266,7 +288,7 @@ export default function Projects() {
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "verified":
       case "approved":
         return "bg-green-100 text-green-700";
@@ -280,7 +302,7 @@ export default function Projects() {
   };
 
   const getStatusIcon = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "verified":
       case "approved":
         return <CheckCircle className="w-4 h-4" />;
@@ -293,20 +315,36 @@ export default function Projects() {
     }
   };
 
-  if (loading)
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-600 animate-pulse">Loading projects...</p>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading projects...</p>
+        </div>
       </div>
     );
+  }
 
-  if (error)
+  if (error) {
     return (
-      <div className="text-center text-red-600 font-medium py-10">{error}</div>
+      <div className="text-center py-10">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
+          <XCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+          <p className="text-red-600 font-medium">{error}</p>
+          <button
+            onClick={fetchProjects}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
     );
+  }
 
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-7xl mx-auto">
       {/* Notification */}
       {showNotification && (
         <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in-down">
@@ -327,7 +365,7 @@ export default function Projects() {
         <div className="flex items-center space-x-3">
           <ArrowBigLeft
             size={20}
-            className="w-8 h-8 text-red-500 transition-all duration-300 cursor-pointer"
+            className="w-8 h-8 text-red-500 transition-all duration-300 cursor-pointer hover:scale-110"
             onClick={() => navigate("/")}
           />
 
@@ -338,6 +376,9 @@ export default function Projects() {
             <p className="text-sm text-gray-500">
               Review and manage project listings
             </p>
+            <p className="text-xs text-blue-600 mt-1">
+              Total Projects: {projects.length}
+            </p>
           </div>
         </div>
 
@@ -345,7 +386,7 @@ export default function Projects() {
           onClick={() =>
             navigate('/post-property', {
               state: {
-                isProject: true   // 👈 pass boolean here
+                isProject: true
               },
             })
           }
@@ -356,164 +397,179 @@ export default function Projects() {
         </button>
       </div>
 
-      {/* Filters */}
+      {/* Filters Section - Improved Layout */}
       <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm mb-8">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex gap-2">
-            {["owner", "agent", "builder"].map(
-              (status) => (
+        {/* Row 1: Role Filters */}
+        <div className="mb-4">
+          <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Role:</label>
+          <div className="flex gap-2 flex-wrap">
+            {["owner", "agent", "builder"].map((status) => (
+              <button
+                key={status}
+                onClick={() => setFilter(status)}
+                className={`px-4 py-2 text-sm rounded-lg border transition font-medium ${
+                  filter === status
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Row 2: Search and Status Filters */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Search Bar - Left Side */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Search Projects:</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by title or city..."
+                className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Status Filters - Right Side */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Status:</label>
+            <div className="flex gap-2 flex-wrap">
+              {["all", "pending", "verified", "rejected", "sold"].map((status) => (
                 <button
                   key={status}
                   onClick={() => setFilter(status)}
-                  className={`px-4 py-2 text-sm rounded-lg border transition font-medium ${filter === status
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                    }`}
+                  className={`px-4 py-2 text-sm rounded-lg border transition font-medium ${
+                    filter === status
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                  }`}
                 >
                   {status.charAt(0).toUpperCase() + status.slice(1)}
                 </button>
-              )
-            )}
-
-          </div>
-          <div className="relative w-full md:w-76">
-            <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by title or city..."
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <div className="flex gap-2">
-            {["all", "pending", "verified", "rejected", "sold"].map(
-              (status) => (
-                <button
-                  key={status}
-                  onClick={() => setFilter(status)}
-                  className={`px-4 py-2 text-sm rounded-lg border transition font-medium ${filter === status
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                    }`}
-                >
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                </button>
-              )
-            )}
-
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Project Cards */}
       {filteredProjects.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProjects.map((project) => (
-            <div
-              key={project.id}
-              className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition"
-            >
-              <div className="relative">
-                <img
-                  src={getPhotoSrc(project.photos)}
-                  alt={project.title}
-                  className="w-full h-48 object-cover"
-                />
+        <>
+          <div className="mb-4 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+            Showing {filteredProjects.length} of {projects.length} projects
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProjects.map((project) => (
+              <div
+                key={project.id}
+                className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col h-full"
+              >
+                <div className="relative">
+                  <img
+                    src={getPhotoSrc(project.photos)}
+                    alt={project.title}
+                    className="w-full h-48 object-cover"
+                    onError={(e) => {
+                      e.target.src = "https://via.placeholder.com/400x300?text=No+Image";
+                    }}
+                  />
 
-                <div className="absolute top-3 right-3 flex items-center gap-2">
-                  <button
-                    onClick={() => handleWishlistClick(project.id, project.status, !project.isActive)}
-                    disabled={project.status === "pending" || project.status === "rejected"}
-                    className={`p-2 rounded-full backdrop-blur-sm transition-all duration-300 
-    ${project.status === "pending" || project.status === "rejected"
-                        ? "opacity-50 cursor-not-allowed"
-                        : project.isActive
-                          ? "bg-red-500 hover:bg-red-600 scale-110"
-                          : "bg-white/80 hover:bg-white shadow-md hover:shadow-lg"
-                      }`}
-                  >
-                    <ThumbsUpIcon
-                      className={`w-7 h-7 transition-all duration-300 
-      ${project.isActive
-                          ? "fill-white text-white"
-                          : "text-gray-700 hover:text-red-500"
+                  <div className="absolute top-3 right-3 flex items-center gap-2">
+                    <button
+                      onClick={() => handleWishlistClick(project.id, project.status, !project.isActive)}
+                      disabled={project.status === "pending" || project.status === "rejected"}
+                      className={`p-2 rounded-full backdrop-blur-sm transition-all duration-300 
+                      ${project.status === "pending" || project.status === "rejected"
+                          ? "opacity-50 cursor-not-allowed"
+                          : project.isActive
+                            ? "bg-red-500 hover:bg-red-600 scale-110"
+                            : "bg-white/80 hover:bg-white shadow-md hover:shadow-lg"
                         }`}
-                    />
-                  </button>
-
-                </div>
-                <div className="absolute top-3 left-3">
-                  <span
-                    className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${getStatusColor(
-                      project.status
-                    )}`}
-                  >
-                    {getStatusIcon(project.status)}
-                    {project.status}
-                  </span>
-
-                </div>
-
-              </div>
-
-              <div className="p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-                  {project.title}
-                </h3>
-
-                <div className="flex items-center text-sm text-gray-600 mb-2">
-                  <MapPin className="w-4 h-4 mr-1" />
-                  {project.address.city}, {project.address.locality}
-                  {project?.isSold && (
-                    <span className="px-2 py-1 ml-4 text-xs font-semibold bg-red-100 text-red-700 rounded-full">
-                      SOLD
-                    </span>)
-                  }
-                </div>
-
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center text-lg font-bold text-blue-700">
-                    <IndianRupee className="w-5 h-5" />
-                    {project.price?.toLocaleString("en-IN")}
+                    >
+                      <ThumbsUpIcon
+                        className={`w-7 h-7 transition-all duration-300 
+                        ${project.isActive
+                            ? "fill-white text-white"
+                            : "text-gray-700 hover:text-red-500"
+                          }`}
+                      />
+                    </button>
                   </div>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Eye className="w-4 h-4 mr-1" />
-                    {project.viewCount}
+                  
+                  <div className="absolute top-3 left-3">
+                    <span
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${getStatusColor(
+                        project.status
+                      )}`}
+                    >
+                      {getStatusIcon(project.status)}
+                      {project.status}
+                    </span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-gray-500 mb-3 pb-3 border-b border-gray-200">
-                  <span className="capitalize">{project.category.name}</span>
-                  <span className="capitalize">{project.marketType}</span>
-                  {/* <span className="capitalize">{project.createdAt}</span> */}
-                </div>
+                <div className="p-4 flex-1 flex flex-col">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+                    {project.title}
+                  </h3>
 
-                <div className="text-xs text-gray-500 mb-3">
-                  <p>
-                    Posted by:{" "}
-                    <span className="font-medium text-gray-700 capitalize">
-                      {project?.client?.role || "Admin"}
+                  <div className="flex items-center text-sm text-gray-600 mb-2">
+                    <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+                    <span className="truncate">
+                      {project.address?.city}, {project.address?.locality}
                     </span>
-                  </p>
-                  <p>
-                    Owner:{" "}
-                    <span className="font-medium text-gray-700 capitalize" >
-                      {project?.client?.fullName || "Unknown"}
-                    </span>
-                  </p>
-                  <p>
-                    Created On:{" "}
-                    <span className="font-medium text-gray-700">
-                      {formatDate(project.createdAt)}
-                    </span>
-                  </p>
-                </div>
+                    {project?.isSold && (
+                      <span className="px-2 py-1 ml-2 text-xs font-semibold bg-red-100 text-red-700 rounded-full whitespace-nowrap">
+                        SOLD
+                      </span>
+                    )}
+                  </div>
 
-                <div className="flex gap-2">
-                  {(project.status === "rejected" || project.status === "pending") && (
-                    <>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center text-lg font-bold text-blue-700">
+                      <IndianRupee className="w-5 h-5" />
+                      {project.price?.toLocaleString("en-IN")}
+                    </div>
+                    <div className="flex items-center text-sm text-gray-500">
+                      <Eye className="w-4 h-4 mr-1" />
+                      {project.viewCount || 0}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-gray-500 mb-3 pb-3 border-b border-gray-200">
+                    <span className="capitalize">{project.category?.name || "N/A"}</span>
+                    <span className="capitalize">{project.marketType || "N/A"}</span>
+                  </div>
+
+                  <div className="text-xs text-gray-500 mb-3 space-y-1">
+                    <p>
+                      Posted by:{" "}
+                      <span className="font-medium text-gray-700 capitalize">
+                        {project?.client?.role || "Admin"}
+                      </span>
+                    </p>
+                    <p>
+                      Owner:{" "}
+                      <span className="font-medium text-gray-700 capitalize">
+                        {project?.client?.fullName || "Unknown"}
+                      </span>
+                    </p>
+                    <p>
+                      Created On:{" "}
+                      <span className="font-medium text-gray-700">
+                        {formatDate(project.createdAt)}
+                      </span>
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2 flex-wrap mt-auto">
+                    {(project.status === "rejected" || project.status === "pending") && (
                       <button
                         onClick={() => handleStatus(project.id, "verified")}
                         className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm flex items-center justify-center gap-1"
@@ -521,10 +577,8 @@ export default function Projects() {
                         <CheckCircle className="w-4 h-4" />
                         Approve
                       </button>
-                    </>
-                  )}
-                  {(project.status === "verified" || project.status === "pending") && (
-                    <>
+                    )}
+                    {(project.status === "verified" || project.status === "pending") && (
                       <button
                         onClick={() => handleStatus(project.id, "rejected")}
                         className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm flex items-center justify-center gap-1"
@@ -532,47 +586,52 @@ export default function Projects() {
                         <XCircle className="w-4 h-4" />
                         Reject
                       </button>
-                    </>
-                  )}
+                    )}
 
-                  <button
-                    onClick={() => handleEdit(project)}
-                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm flex items-center justify-center gap-1"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(project.id)}
-                    className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition font-medium text-sm flex items-center justify-center gap-1"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                  {(!project?.isSold && project?.status === "verified") && (
                     <button
-                      onClick={() => handleSold(project?.id)}
-                      className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
+                      onClick={() => handleEdit(project)}
+                      className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm flex items-center justify-center gap-1"
                     >
-                      <Tag className="w-4 h-4" />
-                      Sold
+                      <Edit className="w-4 h-4" />
+                      Edit
                     </button>
-                  )}
-
+                    <button
+                      onClick={() => handleDelete(project.id)}
+                      className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm flex items-center justify-center gap-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </button>
+                    {(!project?.isSold && project?.status === "verified") && (
+                      <button
+                        onClick={() => handleSold(project?.id)}
+                        className="flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors text-sm font-medium"
+                      >
+                        <Tag className="w-4 h-4" />
+                        Mark as Sold
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       ) : (
         <div className="text-center py-16 bg-white rounded-xl shadow-sm border border-gray-200">
           <Home className="w-14 h-14 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-800 mb-1">
             No projects found
           </h3>
-          <p className="text-sm text-gray-500">Try adjusting your filters</p>
+          <p className="text-sm text-gray-500">
+            {searchTerm || filter !== "all" 
+              ? "Try adjusting your filters or search terms" 
+              : "Click 'Add Project' to create your first listing"}
+          </p>
         </div>
       )}
 
-      {/* Add/Edit Modals */}
+      {/* Add Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-auto">
@@ -597,6 +656,7 @@ export default function Projects() {
         </div>
       )}
 
+      {/* Edit Modal */}
       {showEditModal && editingProject && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-auto">
@@ -639,6 +699,12 @@ export default function Projects() {
         }
         .animate-fade-in-down {
           animation: fade-in-down 0.5s ease-out;
+        }
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
       `}</style>
     </div>

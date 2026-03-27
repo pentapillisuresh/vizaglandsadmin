@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, X, Video, MapPin, Upload, Edit, Trash2, Check, AlertCircle, Save } from "lucide-react";
+import { Plus, X, Video, MapPin, Upload, Edit, Trash2, Check, AlertCircle, Save, Search } from "lucide-react";
 import ApiService from "../hooks/ApiService";
 
 const API_BASE = "http://localhost:3000/api";
@@ -12,8 +12,7 @@ const ContentManager = () => {
   const [isDeleteCityModel, setIsDeleteCityModel] = useState(false);
   const [activeTab, setActiveTab] = useState("video");
   const [editId, setEditId] = useState(null);
-  const [commercialAds, setCommercialAds] = useState("");
-  const [loading, setLoading] = useState("");
+  const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [localityInput, setLocalityInput] = useState("");
@@ -22,6 +21,16 @@ const ContentManager = () => {
   const [editingLocalityValue, setEditingLocalityValue] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  
+  // Search states for main page
+  const [citySearchTerm, setCitySearchTerm] = useState("");
+  const [localitySearchTerm, setLocalitySearchTerm] = useState("");
+  
+  // Search states for add popup
+  const [addLocalitySearchTerm, setAddLocalitySearchTerm] = useState("");
+  
+  // Search states for edit popup
+  const [editLocalitySearchTerm, setEditLocalitySearchTerm] = useState("");
 
   const [videoForm, setVideoForm] = useState({
     title: "",
@@ -32,6 +41,25 @@ const ContentManager = () => {
     photo: "",
     status: "inactive",
   });
+
+  const [cityForm, setCityForm] = useState({
+    city: "",
+    locality: [],
+  });
+
+  // Helper function to highlight text
+  const highlightText = (text, searchTerm) => {
+    if (!searchTerm || !text) return text;
+    const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+    return parts.map((part, index) => 
+      regex.test(part) ? 
+        <span key={index} className="bg-yellow-300 text-gray-900 font-semibold px-0.5 rounded">
+          {part}
+        </span> : 
+        part
+    );
+  };
 
   const handleVideoChange = (e) => {
     const { name, value } = e.target;
@@ -87,20 +115,18 @@ const ContentManager = () => {
     e.preventDefault();
 
     try {
-      const formData = new FormData();
-      formData.append("name", videoForm.title);
-      formData.append("description", videoForm.description);
-      formData.append("photo", videoForm.youtubeLink || videoForm.videoFileName);
-      formData.append("status", "inactive");
-
       const adminToken = localStorage.getItem('token');
+      
+      const videoData = {
+        name: videoForm.title,
+        description: videoForm.description,
+        photo: videoForm.youtubeLink || videoForm.photo,
+        status: "inactive",
+      };
+      
       if (editId) {
         // Update existing ad
-        await ApiService.put(`commercialAds/${editId}`, {
-          name: videoForm.title,
-          description: videoForm.description,
-          photo: videoForm.youtubeLink || videoForm.photo,
-        }, {
+        await ApiService.put(`/commercialAds/${editId}`, videoData, {
           headers: {
             Authorization: `Bearer ${adminToken}`,
             "Content-Type": "application/json",
@@ -109,12 +135,7 @@ const ContentManager = () => {
         setSuccessMessage("Video updated successfully!");
       } else {
         // Create new ad
-        await ApiService.post('/commercialAds', {
-          name: videoForm.title,
-          description: videoForm.description,
-          photo: videoForm.youtubeLink || videoForm.photo,
-          status: "inactive",
-        }, {
+        await ApiService.post('/commercialAds', videoData, {
           headers: {
             Authorization: `Bearer ${adminToken}`,
             "Content-Type": "application/json",
@@ -126,6 +147,7 @@ const ContentManager = () => {
       setTimeout(() => setSuccessMessage(""), 3000);
       resetForms();
       setActiveModal("");
+      setEditId(null);
       fetchVideos();
     } catch (error) {
       console.error("Error saving video:", error);
@@ -134,33 +156,37 @@ const ContentManager = () => {
     }
   };
 
-  // Handle edit
+  // Handle edit video
   const editVideo = (id) => {
     const v = videos.find((item) => item.id === id);
     if (!v) return;
     setEditId(id);
     setVideoForm({
-      title: v.name,
-      description: v.description,
+      title: v.name || "",
+      description: v.description || "",
       youtubeLink: v.photo?.startsWith("http") ? v.photo : "",
       videoFileName: v.photo || "",
-      status: v.status,
+      photo: v.photo || "",
+      status: v.status || "inactive",
     });
     setActiveModal("video");
   };
 
-  const [cityForm, setCityForm] = useState({
-    city: "",
-    locality: [], // Changed to array to support multiple localities
-  });
-
   const fetchVideos = async () => {
     try {
       setLoading(true);
-      const res = await ApiService.get("/commercialAds");
-      setVideos(res);
+      const adminToken = localStorage.getItem('token');
+      const res = await ApiService.get("/commercialAds", {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          "Content-Type": "application/json"
+        }
+      });
+      setVideos(res || []);
     } catch (error) {
       console.error("Error fetching videos:", error);
+      setErrorMessage("Failed to fetch videos");
+      setTimeout(() => setErrorMessage(""), 3000);
     } finally {
       setLoading(false);
     }
@@ -179,7 +205,13 @@ const ContentManager = () => {
   const deleteVideo = async (id) => {
     if (!window.confirm("Are you sure you want to delete this video?")) return;
     try {
-      await ApiService.delete(`/commercialAds/${id}`);
+      const adminToken = localStorage.getItem('token');
+      await ApiService.delete(`/commercialAds/${id}`, {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          "Content-Type": "application/json"
+        }
+      });
       setSuccessMessage("Video deleted successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
       fetchVideos();
@@ -193,8 +225,14 @@ const ContentManager = () => {
   // Activate ad (set status active)
   const activateVideo = async (id) => {
     try {
+      const adminToken = localStorage.getItem('token');
       await ApiService.put(`/commercialAds/${id}/status`, {
         status: "active",
+      }, {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          "Content-Type": "application/json"
+        }
       });
       setSuccessMessage("Video activated successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
@@ -209,6 +247,7 @@ const ContentManager = () => {
   // 🔹 Fetch all city data
   const fetchCities = async () => {
     try {
+      setLoading(true);
       const adminToken = localStorage.getItem('token');
       const res = await ApiService.get('/city', {
         headers: {
@@ -216,9 +255,31 @@ const ContentManager = () => {
           "Content-Type": "application/json"
         }
       });
-      setLocations(res || []);
+      
+      // Process each city to sort its localities alphabetically
+      const processedLocations = (res || []).map(location => {
+        let localities = [];
+        if (Array.isArray(location.locality)) {
+          localities = [...location.locality];
+        } else if (location.locality) {
+          localities = [location.locality];
+        }
+        // Sort localities alphabetically
+        localities.sort((a, b) => a.localeCompare(b));
+        
+        return {
+          ...location,
+          locality: localities
+        };
+      });
+      
+      setLocations(processedLocations);
     } catch (error) {
       console.error("Error fetching city data:", error);
+      setErrorMessage("Failed to fetch cities");
+      setTimeout(() => setErrorMessage(""), 3000);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -230,6 +291,8 @@ const ContentManager = () => {
       videoUrl: "",
       videoFileName: "",
       youtubeLink: "",
+      photo: "",
+      status: "inactive",
     });
     setCityForm({ city: "", locality: [] });
     setEditId(null);
@@ -237,6 +300,8 @@ const ContentManager = () => {
     setEditLocalityInput("");
     setEditingLocalityIndex(null);
     setEditingLocalityValue("");
+    setAddLocalitySearchTerm("");
+    setEditLocalitySearchTerm("");
   };
 
   // 🔹 Handle City form change
@@ -248,22 +313,30 @@ const ContentManager = () => {
   // 🔹 Add locality to the array (for add modal)
   const addLocality = () => {
     if (localityInput.trim()) {
+      const updatedLocalities = [...cityForm.locality, localityInput.trim()];
+      // Sort localities alphabetically
+      updatedLocalities.sort((a, b) => a.localeCompare(b));
       setCityForm({
         ...cityForm,
-        locality: [...cityForm.locality, localityInput.trim()]
+        locality: updatedLocalities
       });
       setLocalityInput("");
+      setAddLocalitySearchTerm("");
     }
   };
 
   // 🔹 Add locality to edit array
   const addEditLocality = () => {
     if (editLocalityInput.trim()) {
+      const updatedLocalities = [...cityForm.locality, editLocalityInput.trim()];
+      // Sort localities alphabetically
+      updatedLocalities.sort((a, b) => a.localeCompare(b));
       setCityForm({
         ...cityForm,
-        locality: [...cityForm.locality, editLocalityInput.trim()]
+        locality: updatedLocalities
       });
       setEditLocalityInput("");
+      setEditLocalitySearchTerm("");
     }
   };
 
@@ -278,6 +351,8 @@ const ContentManager = () => {
     if (editingLocalityValue.trim()) {
       const updatedLocalities = [...cityForm.locality];
       updatedLocalities[index] = editingLocalityValue.trim();
+      // Sort localities alphabetically after edit
+      updatedLocalities.sort((a, b) => a.localeCompare(b));
       setCityForm({
         ...cityForm,
         locality: updatedLocalities
@@ -298,9 +373,12 @@ const ContentManager = () => {
 
   // 🔹 Remove locality from array
   const removeLocality = (indexToRemove) => {
+    const updatedLocalities = cityForm.locality.filter((_, index) => index !== indexToRemove);
+    // Sort localities alphabetically after removal
+    updatedLocalities.sort((a, b) => a.localeCompare(b));
     setCityForm({
       ...cityForm,
-      locality: cityForm.locality.filter((_, index) => index !== indexToRemove)
+      locality: updatedLocalities
     });
   };
 
@@ -313,10 +391,16 @@ const ContentManager = () => {
       return;
     }
     
+    if (!cityForm.city.trim()) {
+      setErrorMessage("Please enter city name");
+      setTimeout(() => setErrorMessage(""), 3000);
+      return;
+    }
+    
     try {
       const adminToken = localStorage.getItem('token');
       const payload = {
-        city: cityForm.city,
+        city: cityForm.city.trim(),
         locality: cityForm.locality
       };
       
@@ -334,7 +418,7 @@ const ContentManager = () => {
       setActiveModal("");
     } catch (error) {
       console.error("Error saving city:", error);
-      setErrorMessage("Failed to save city. Please try again.");
+      setErrorMessage(error.response?.data?.message || "Failed to save city. Please try again.");
       setTimeout(() => setErrorMessage(""), 3000);
     }
   };
@@ -347,8 +431,14 @@ const ContentManager = () => {
       return;
     }
     
+    if (!cityForm.city.trim()) {
+      setErrorMessage("Please enter city name");
+      setTimeout(() => setErrorMessage(""), 3000);
+      return;
+    }
+    
     const payload = {
-      city: cityForm.city,
+      city: cityForm.city.trim(),
       id: editId,
       locality: cityForm.locality
     };
@@ -367,10 +457,10 @@ const ContentManager = () => {
       setIsActivCityeModal(false);
       await fetchCities(); // refresh list
       resetForms();
-      setActiveModal("");
+      setEditId(null);
     } catch (error) {
-      console.error("Error saving city:", error);
-      setErrorMessage("Failed to update city. Please try again.");
+      console.error("Error updating city:", error);
+      setErrorMessage(error.response?.data?.message || "Failed to update city. Please try again.");
       setTimeout(() => setErrorMessage(""), 3000);
     }
   };
@@ -401,9 +491,12 @@ const ContentManager = () => {
     const loc = locations.find((l) => l.id === id);
     if (loc) {
       // Handle both array and string locality formats
-      const localityArray = Array.isArray(loc.locality) 
+      let localityArray = Array.isArray(loc.locality) 
         ? loc.locality 
         : loc.locality ? [loc.locality] : [];
+      
+      // Sort localities alphabetically
+      localityArray.sort((a, b) => a.localeCompare(b));
       
       setCityForm({ 
         city: loc.city, 
@@ -412,9 +505,40 @@ const ContentManager = () => {
       setEditId(loc.id);
       setEditLocalityInput("");
       setEditingLocalityIndex(null);
+      setEditLocalitySearchTerm("");
       setIsActivCityeModal(true);
     }
   };
+
+  // Sort cities alphabetically
+  const sortedLocations = [...locations].sort((a, b) => 
+    a.city?.localeCompare(b.city)
+  );
+
+  // Filter cities based on search term
+  const filteredLocations = sortedLocations.filter(location => {
+    const matchesCity = location.city?.toLowerCase().includes(citySearchTerm.toLowerCase());
+    if (localitySearchTerm) {
+      const localities = Array.isArray(location.locality) ? location.locality : [location.locality];
+      const matchesLocality = localities.some(loc => 
+        loc?.toLowerCase().includes(localitySearchTerm.toLowerCase())
+      );
+      return matchesCity && matchesLocality;
+    }
+    return matchesCity;
+  });
+
+  // Filter localities for add popup (sorted alphabetically)
+  const sortedAddLocalities = [...cityForm.locality].sort((a, b) => a.localeCompare(b));
+  const filteredAddLocalities = sortedAddLocalities.filter(loc =>
+    loc?.toLowerCase().includes(addLocalitySearchTerm.toLowerCase())
+  );
+
+  // Filter localities for edit popup (sorted alphabetically)
+  const sortedEditLocalities = [...cityForm.locality].sort((a, b) => a.localeCompare(b));
+  const filteredEditLocalities = sortedEditLocalities.filter(loc =>
+    loc?.toLowerCase().includes(editLocalitySearchTerm.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
@@ -452,7 +576,10 @@ const ContentManager = () => {
 
           <div className="flex gap-3">
             <button
-              onClick={() => setActiveTab("video")}
+              onClick={() => {
+                setActiveTab("video");
+                resetForms();
+              }}
               className={`${activeTab === "video"
                 ? "bg-blue-600 text-white"
                 : "bg-blue-100 text-blue-700 hover:bg-blue-200"
@@ -461,7 +588,10 @@ const ContentManager = () => {
               <Video className="w-5 h-5" /> Video
             </button>
             <button
-              onClick={() => setActiveTab("city")}
+              onClick={() => {
+                setActiveTab("city");
+                resetForms();
+              }}
               className={`${activeTab === "city"
                 ? "bg-green-600 text-white"
                 : "bg-green-100 text-green-700 hover:bg-green-200"
@@ -482,6 +612,7 @@ const ContentManager = () => {
               <button
                 onClick={() => {
                   resetForms();
+                  setEditId(null);
                   setActiveModal("video");
                 }}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 font-medium transition-all duration-200"
@@ -524,7 +655,7 @@ const ContentManager = () => {
                       {videos?.length === 0 ? (
                         <tr>
                           <td colSpan="5" className="text-center py-6 text-slate-500">
-                            No ads found.
+                            No videos found.
                           </td>
                         </tr>
                       ) : (
@@ -560,7 +691,6 @@ const ContentManager = () => {
                               >
                                 <X className="w-4 h-4" />
                               </button>
-
                               {v.status !== "active" && (
                                 <button
                                   onClick={() => activateVideo(v.id)}
@@ -584,10 +714,33 @@ const ContentManager = () => {
         {/* City Section */}
         {activeTab === "city" && (
           <div className="space-y-6">
-            <div className="flex justify-end">
+            <div className="flex justify-between items-center gap-4 flex-wrap">
+              <div className="flex gap-4 flex-1 min-w-[300px]">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by city name..."
+                    className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                    value={citySearchTerm}
+                    onChange={(e) => setCitySearchTerm(e.target.value)}
+                  />
+                </div>
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by locality..."
+                    className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                    value={localitySearchTerm}
+                    onChange={(e) => setLocalitySearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
               <button
                 onClick={() => {
                   resetForms();
+                  setEditId(null);
                   setActiveModal("city");
                 }}
                 className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 font-medium transition-all duration-200"
@@ -597,8 +750,11 @@ const ContentManager = () => {
             </div>
 
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
-              <div className="bg-slate-800 text-white px-6 py-4 text-lg font-semibold">
-                City List
+              <div className="bg-slate-800 text-white px-6 py-4 text-lg font-semibold flex justify-between items-center">
+                <span>City List (A-Z Order)</span>
+                <span className="text-sm font-normal">
+                  Total: {filteredLocations.length} cities
+                </span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -606,55 +762,61 @@ const ContentManager = () => {
                     <tr>
                       <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">#</th>
                       <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">City</th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Localities</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Localities (A-Z)</th>
                       <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {locations?.length === 0 ? (
+                    {filteredLocations?.length === 0 ? (
                       <tr>
                         <td colSpan="4" className="text-center py-6 text-slate-500">
                           No records found.
                         </td>
                       </tr>
                     ) : (
-                      locations?.map((l, i) => (
-                        <tr key={l.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-3">{i + 1}</td>
-                          <td className="px-6 py-3 font-semibold">{l.city}</td>
-                          <td className="px-6 py-3 text-slate-700">
-                            <div className="flex flex-wrap gap-1">
-                              {Array.isArray(l.locality) 
-                                ? l.locality.map((loc, idx) => (
-                                    <span key={idx} className="bg-gray-100 px-2 py-1 rounded-md text-sm">
-                                      {loc}
-                                    </span>
-                                  ))
-                                : <span className="bg-gray-100 px-2 py-1 rounded-md text-sm">{l.locality}</span>
-                              }
-                            </div>
-                          </td>
-                          <td className="px-6 py-3 flex gap-2">
-                            <button
-                              onClick={() => editLocation(l.id)}
-                              className="text-green-600 hover:bg-green-50 p-2 rounded-lg transition-colors"
-                              title="Edit"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                setEditId(l.id);
-                                setIsDeleteCityModel(true);
-                              }}
-                              className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                              title="Delete"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                      filteredLocations?.map((l, i) => {
+                        // Ensure localities are sorted alphabetically for display
+                        const sortedLocalities = Array.isArray(l.locality) 
+                          ? [...l.locality].sort((a, b) => a.localeCompare(b))
+                          : l.locality ? [l.locality] : [];
+                        
+                        return (
+                          <tr key={l.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-6 py-3">{i + 1}</td>
+                            <td className="px-6 py-3 font-semibold">
+                              {highlightText(l.city, citySearchTerm)}
+                            </td>
+                            <td className="px-6 py-3 text-slate-700">
+                              <div className="flex flex-wrap gap-1">
+                                {sortedLocalities.map((loc, idx) => (
+                                  <span key={idx} className="bg-gray-100 px-2 py-1 rounded-md text-sm">
+                                    {highlightText(loc, localitySearchTerm)}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-6 py-3 flex gap-2">
+                              <button
+                                onClick={() => editLocation(l.id)}
+                                className="text-green-600 hover:bg-green-50 p-2 rounded-lg transition-colors"
+                                title="Edit"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditId(l.id);
+                                  setIsDeleteCityModel(true);
+                                }}
+                                className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                title="Delete"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
@@ -673,7 +835,11 @@ const ContentManager = () => {
                 {editId ? "Edit Video Post" : "Add Video Post"}
               </h2>
               <button
-                onClick={() => setActiveModal("")}
+                onClick={() => {
+                  setActiveModal("");
+                  resetForms();
+                  setEditId(null);
+                }}
                 className="text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <X className="w-6 h-6" />
@@ -720,7 +886,6 @@ const ContentManager = () => {
                       setVideoForm({
                         ...videoForm,
                         youtubeLink: e.target.value,
-                        videoUrl: "",
                         videoFileName: "",
                       })
                     }
@@ -767,7 +932,11 @@ const ContentManager = () => {
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setActiveModal("")}
+                  onClick={() => {
+                    setActiveModal("");
+                    resetForms();
+                    setEditId(null);
+                  }}
                   className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-3 rounded-lg font-medium transition-colors"
                   disabled={uploading}
                 >
@@ -793,7 +962,7 @@ const ContentManager = () => {
         </div>
       )}
 
-      {/* City Modal - Add New City */}
+      {/* City Modal - Add New City with Search and Highlight */}
       {activeModal === "city" && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -853,27 +1022,48 @@ const ContentManager = () => {
                   </button>
                 </div>
                 
-                {/* Localities List */}
+                {/* Search Bar for Localities */}
                 {cityForm.locality.length > 0 && (
+                  <div className="mb-3 relative">
+                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search localities..."
+                      className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                      value={addLocalitySearchTerm}
+                      onChange={(e) => setAddLocalitySearchTerm(e.target.value)}
+                    />
+                  </div>
+                )}
+                
+                {/* Localities List with Search and Highlight */}
+                {filteredAddLocalities.length > 0 && (
                   <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
-                    <p className="text-sm text-slate-600 mb-3">Added Localities:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {cityForm.locality.map((loc, index) => (
-                        <div
-                          key={index}
-                          className="bg-white border border-slate-200 rounded-lg px-3 py-2 flex items-center gap-2 shadow-sm hover:shadow-md transition-all"
-                        >
-                          <span className="text-slate-700">{loc}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeLocality(index)}
-                            className="text-red-500 hover:text-red-700 transition-colors"
-                            title="Remove locality"
+                    <p className="text-sm text-slate-600 mb-3">
+                      Added Localities ({filteredAddLocalities.length}) - A-Z Order:
+                    </p>
+                    <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+                      {filteredAddLocalities.map((loc, filteredIndex) => {
+                        const originalIndex = cityForm.locality.findIndex(l => l === loc);
+                        return (
+                          <div
+                            key={originalIndex}
+                            className="bg-white border border-slate-200 rounded-lg px-3 py-2 flex items-center gap-2 shadow-sm hover:shadow-md transition-all"
                           >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
+                            <span className="text-slate-700">
+                              {highlightText(loc, addLocalitySearchTerm)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => removeLocality(originalIndex)}
+                              className="text-red-500 hover:text-red-700 transition-colors"
+                              title="Remove locality"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -905,7 +1095,7 @@ const ContentManager = () => {
         </div>
       )}
 
-      {/* Edit City Modal - With Inline Editing for Localities */}
+      {/* Edit City Modal - With Inline Editing for Localities and Search with Highlight */}
       {isActivCityeModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
@@ -922,6 +1112,7 @@ const ContentManager = () => {
                 onClick={() => {
                   setIsActivCityeModal(false);
                   resetForms();
+                  setEditId(null);
                 }}
                 className="text-slate-400 hover:text-slate-600 transition-colors"
               >
@@ -976,84 +1167,103 @@ const ContentManager = () => {
                     </button>
                   </div>
                   
-                  {/* Existing Localities List with Edit/Delete Options */}
-                  {cityForm.locality.length > 0 ? (
+                  {/* Search Bar for Localities in Edit Mode */}
+                  {cityForm.locality.length > 0 && (
+                    <div className="mb-3 relative">
+                      <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search localities..."
+                        className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                        value={editLocalitySearchTerm}
+                        onChange={(e) => setEditLocalitySearchTerm(e.target.value)}
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Existing Localities List with Search, Highlight, Edit/Delete Options */}
+                  {filteredEditLocalities.length > 0 ? (
                     <div>
                       <p className="text-sm font-medium text-slate-700 mb-3">
-                        Current Localities ({cityForm.locality.length}):
+                        Current Localities ({filteredEditLocalities.length}) - A-Z Order:
                       </p>
-                      <div className="space-y-2">
-                        {cityForm.locality.map((loc, index) => (
-                          <div
-                            key={index}
-                            className="bg-white border border-slate-200 rounded-lg p-3 hover:shadow-md transition-all"
-                          >
-                            {editingLocalityIndex === index ? (
-                              // Edit Mode
-                              <div className="flex gap-2">
-                                <input
-                                  type="text"
-                                  value={editingLocalityValue}
-                                  onChange={(e) => setEditingLocalityValue(e.target.value)}
-                                  onKeyPress={(e) => {
-                                    if (e.key === 'Enter') {
-                                      e.preventDefault();
-                                      saveEditedLocality(index);
-                                    }
-                                  }}
-                                  className="flex-1 border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 outline-none"
-                                  autoFocus
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => saveEditedLocality(index)}
-                                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-                                  title="Save"
-                                >
-                                  <Save className="w-4 h-4" /> Save
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={cancelEditing}
-                                  className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-                                  title="Cancel"
-                                >
-                                  <X className="w-4 h-4" /> Cancel
-                                </button>
-                              </div>
-                            ) : (
-                              // View Mode
-                              <div className="flex items-center justify-between">
-                                <span className="text-slate-700 flex-1">{loc}</span>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {filteredEditLocalities.map((loc, filteredIndex) => {
+                          const originalIndex = cityForm.locality.findIndex(l => l === loc);
+                          return (
+                            <div
+                              key={originalIndex}
+                              className="bg-white border border-slate-200 rounded-lg p-3 hover:shadow-md transition-all"
+                            >
+                              {editingLocalityIndex === originalIndex ? (
+                                // Edit Mode
                                 <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    value={editingLocalityValue}
+                                    onChange={(e) => setEditingLocalityValue(e.target.value)}
+                                    onKeyPress={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        saveEditedLocality(originalIndex);
+                                      }
+                                    }}
+                                    className="flex-1 border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 outline-none"
+                                    autoFocus
+                                  />
                                   <button
                                     type="button"
-                                    onClick={() => startEditingLocality(index)}
-                                    className="text-blue-500 hover:text-blue-700 p-1 transition-colors"
-                                    title="Edit locality"
+                                    onClick={() => saveEditedLocality(originalIndex)}
+                                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                                    title="Save"
                                   >
-                                    <Edit className="w-4 h-4" />
+                                    <Save className="w-4 h-4" /> Save
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => removeLocality(index)}
-                                    className="text-red-500 hover:text-red-700 p-1 transition-colors"
-                                    title="Delete locality"
+                                    onClick={cancelEditing}
+                                    className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                                    title="Cancel"
                                   >
-                                    <Trash2 className="w-4 h-4" />
+                                    <X className="w-4 h-4" /> Cancel
                                   </button>
                                 </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                              ) : (
+                                // View Mode
+                                <div className="flex items-center justify-between">
+                                  <span className="text-slate-700 flex-1">
+                                    {highlightText(loc, editLocalitySearchTerm)}
+                                  </span>
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => startEditingLocality(originalIndex)}
+                                      className="text-blue-500 hover:text-blue-700 p-1 transition-colors"
+                                      title="Edit locality"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeLocality(originalIndex)}
+                                      className="text-red-500 hover:text-red-700 p-1 transition-colors"
+                                      title="Delete locality"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   ) : (
                     <div className="text-center py-8 bg-white rounded-lg border-2 border-dashed border-slate-200">
                       <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-2" />
-                      <p className="text-amber-600 font-medium">No localities added</p>
-                      <p className="text-sm text-slate-500 mt-1">Please add at least one locality above</p>
+                      <p className="text-amber-600 font-medium">No localities found</p>
+                      <p className="text-sm text-slate-500 mt-1">Try a different search term or add new localities above</p>
                     </div>
                   )}
                 </div>
@@ -1066,6 +1276,7 @@ const ContentManager = () => {
                   onClick={() => {
                     setIsActivCityeModal(false);
                     resetForms();
+                    setEditId(null);
                   }}
                   className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-3 rounded-lg font-medium transition-colors"
                 >
@@ -1089,7 +1300,7 @@ const ContentManager = () => {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-sm text-blue-700 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" />
-                    You have {cityForm.locality.length} locality(ies) for this city. Click the edit icon to modify or trash icon to delete.
+                    You have {cityForm.locality.length} locality(ies) for this city. Use the search bar to find specific localities. Click the edit icon to modify or trash icon to delete.
                   </p>
                 </div>
               )}
