@@ -150,7 +150,7 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
     setBedrooms(data?.propertyProfile?.bedrooms || null);
     setBathrooms(data?.propertyProfile?.bathrooms || null);
     setBalconies(data?.propertyProfile?.balconies || null);
-    setPoojaRoom(data?.propertyProfile?.poojaRoom ?? true);
+    setPoojaRoom(data?.propertyProfile?.poojaRooms ?? true);
     setCarpetArea(data?.propertyProfile?.carpetArea || null);
     setBuiltArea(data?.propertyProfile?.buildArea || null);
     if (data?.propertyProfile?.buildArea) {
@@ -222,7 +222,7 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
         bedrooms,
         bathrooms,
         balconies,
-        poojaRoom,
+        poojaRooms:poojaRoom,
         carpetArea,
         buildArea: builtArea,
         superBuildArea: superBuiltArea,
