@@ -177,17 +177,16 @@ const PostProperty = () => {
     let score = 0;
     if (p.propertyName) score += 10;
     if (p.title) score += 10;
-    if (p.description) score += 8;
-    if (p.marketType) score += 8;
-    if (p.propertyKind) score += 8;
-    if (p.price) score += 10;
+    if (p.description) score += 20;
+    if (p.marketType) score += 10;
+    // if (p.propertyKind) score += 10;
+    if (p.price) score += 30;
     if (p.address.city) score += 10;
     if (p.address.locality) score += 10;
-    if (p.propertyProfile.type) score += 8;
-    if (p.photos) score += 8;
+    // if (p.propertyProfile.type) score += 10;
+    // if (p.photos) score += 10;
     return Math.min(score, 100);
   };
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto py-8 px-4">
@@ -215,7 +214,7 @@ const PostProperty = () => {
                       stroke="#f97316"
                       strokeWidth="8"
                       fill="none"
-                      strokeDasharray={`${(calculateScore() / 100) * 226} 226`}
+                      strokeDasharray={`${(calculateScore() / 100) * 250} 250`}
                       strokeLinecap="round"
                     />
                   </svg>

@@ -12,7 +12,7 @@ const PricingOthers = ({ data, updateData, isEditMode,isProject }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
-console.log("rrr::",data)
+
   const navigate = useNavigate();
 
   const approvedOptions = ['VMRDA', 'VUDA', 'DTCP', 'RERA', 'GVMC', 'Bank Loan'];
@@ -66,7 +66,7 @@ console.log("rrr::",data)
     if (data.amenities) score += 10;
     if (data.propertyProfile) score += 20;
     if (data.price) score += 10;
-    if (data.propertySubtype) score += 10;
+    if (data.propertySubtype) score += 20;
     if (description) score += 10;
     return score;
   };

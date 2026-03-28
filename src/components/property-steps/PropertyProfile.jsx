@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const PropertyProfile = ({ data = {}, onNext, updateData,isProject }) => {
+const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
   // Property subtype
   const [propertySubtype, setPropertySubtype] = useState(data.propertySubtype || "");
 
@@ -87,7 +87,7 @@ const PropertyProfile = ({ data = {}, onNext, updateData,isProject }) => {
   };
 
   const validateOpenParking = (value) => {
-    const numValue = parseInt(value); 
+    const numValue = parseInt(value);
     return numValue > 0 && numValue <= 10;
   };
 
@@ -142,7 +142,7 @@ const PropertyProfile = ({ data = {}, onNext, updateData,isProject }) => {
     setLandArea(data?.propertyProfile?.landArea || 1);
     setPlotAreaUnit(data?.propertyProfile?.plotAreaUnit || (isLand ? "acres" : isPlot ? "sq yards" : "sqft"));
     setLength(data?.propertyProfile?.length || "");
-    setBreadth(data?.propertyProfile?.breadth || "");
+    setBreadth(data?.propertyProfile?.breath || "");
     setFacing(data?.propertyProfile?.facing || "");
     setFrontage(data?.propertyProfile?.frontage || "");
     setPrice(data?.price || null);
@@ -153,7 +153,18 @@ const PropertyProfile = ({ data = {}, onNext, updateData,isProject }) => {
     setPoojaRoom(data?.propertyProfile?.poojaRoom ?? true);
     setCarpetArea(data?.propertyProfile?.carpetArea || null);
     setBuiltArea(data?.propertyProfile?.buildArea || null);
+    if (data?.propertyProfile?.buildArea) {
+      setShowBuiltArea(true)
+    }
     setSuperBuiltArea(data?.propertyProfile?.superBuildArea || null);
+    if (data?.propertyProfile?.superBuildArea) {
+      setShowSuperBuiltArea(true)
+    }
+
+    setUDS_area(data?.propertyProfile?.UDS_area || "");
+    if (data?.propertyProfile?.UDS_area) {
+      setShowUDS_area(true)
+    }
     setAreaUnit(data?.propertyProfile?.areaUnit || (isLand ? "acres" : "sqft"));
     setParkingType(data?.propertyProfile?.parkingType || "");
     setClosedParking(data?.propertyProfile?.closedParking || 0);
@@ -165,10 +176,8 @@ const PropertyProfile = ({ data = {}, onNext, updateData,isProject }) => {
     setUnits(data?.propertyProfile?.units || 0);
     setOfficeNumber(data?.propertyProfile?.officeNumber || "");
     setShopNumber(data?.propertyProfile?.shopNumber || "");
-
     setTotalFloors(data?.propertyProfile?.totalFloors || "");
-    setPropertyOnFloor(data?.propertyProfile?.propertyOnFloor || "");
-
+    setPropertyOnFloor(data?.propertyProfile?.floorNumber || "");
     setRoadWidth(data?.propertyProfile?.roadWidth || 0);
     setCornerShop(data?.propertyProfile?.cornerShop || false);
     setPantryAvailable(data?.propertyProfile?.pantryAvailable || false);
@@ -183,7 +192,6 @@ const PropertyProfile = ({ data = {}, onNext, updateData,isProject }) => {
     setParkingSpaces(data?.propertyProfile?.parkingSpaces || null);
     setSecurityAvailable(data?.propertyProfile?.securityAvailable || false);
     setWaterSupply(data?.propertyProfile?.waterSupply || "");
-
     setShowBuiltArea(!!data?.propertyProfile?.builtArea);
     setShowSuperBuiltArea(!!data?.propertyProfile?.superBuiltArea);
     setShowCommercialAddons(canHaveCommercialAddons);
@@ -205,7 +213,7 @@ const PropertyProfile = ({ data = {}, onNext, updateData,isProject }) => {
         landArea,
         areaUnit: plotAreaUnit,
         length,
-        breadth,
+        breath: breadth,
         price,
         ...(isLand ? { frontage: frontage ?? "" } : { facing }),
       };
@@ -218,6 +226,7 @@ const PropertyProfile = ({ data = {}, onNext, updateData,isProject }) => {
         carpetArea,
         buildArea: builtArea,
         superBuildArea: superBuiltArea,
+        UDS_area: UDS_area,
         areaUnit,
         price,
         units,
@@ -227,7 +236,7 @@ const PropertyProfile = ({ data = {}, onNext, updateData,isProject }) => {
         parkingSpaces,
         status,
         possession,
-        ...(needsFloorDetails ? { totalFloors, propertyOnFloor } : {}),
+        ...(needsFloorDetails ? { totalFloors, floorNumber:propertyOnFloor } : {}),
         ...(isFlat ? { flatNumber } : {}),
         ...(isOfficeSpace ? { officeNumber, cabins, conferenceRooms, workstations } : {}),
         ...(isShopShowroom ? { shopNumber, parkingSpaces } : {}),
@@ -265,17 +274,17 @@ const PropertyProfile = ({ data = {}, onNext, updateData,isProject }) => {
     facing
   }) {
     const missing = [];
-  
+
     // 🏷️ Common required fields
     if (!price) missing.push("price");
     if (!plotAreaUnit) missing.push("plotAreaUnit");
-  
+
     // 📏 Plot-only fields (not required for land)
     if (!isLand) {
       if (!length) missing.push("length");
       if (!breadth) missing.push("breadth");
     }
-  
+
     // 🧱 Conditional validation
     if (isLand) {
       // Land: frontage & landArea required
@@ -286,13 +295,13 @@ const PropertyProfile = ({ data = {}, onNext, updateData,isProject }) => {
       if (!plotArea) missing.push("plotArea");
       if (!facing) missing.push("facing");
     }
-  
+
     return {
       isValid: missing.length === 0,
       missing,
     };
   }
-    
+
   // Example usage:
   const { isValid: allPlotFieldsFilled, missing } = validatePlotFields({
     price,
@@ -305,10 +314,7 @@ const PropertyProfile = ({ data = {}, onNext, updateData,isProject }) => {
     plotArea,
     facing,
   });
-  
-  console.log("allPlotFieldsFilled:", allPlotFieldsFilled);
-  console.log("Missing fields:", missing);
-  
+
   // At least one area must be provided
 
   function validateBaseResidential({
@@ -325,21 +331,18 @@ const PropertyProfile = ({ data = {}, onNext, updateData,isProject }) => {
     possession
   }) {
     const missing = [];
-  
+
     // 🏠 Required core fields
-    // if (!bedrooms) missing.push("bedrooms");
-    // if (!bathrooms) missing.push("bathrooms");
-    // if (!balconies) missing.push("balconies");
     if (!areaUnit) missing.push("areaUnit");
     if (!totalFloors) missing.push("totalFloors");
     if (!status) missing.push("status");
-  
+
     // 📐 At least one area required
     const hasAtLeastOneArea = [carpetArea, builtArea, superBuiltArea].some(
       area => area != null && area !== ""
     );
     if (!hasAtLeastOneArea) missing.push("Area (carpet/built/superBuilt)");
-  
+
     // 🧱 Conditional checks based on property status
     if (status === "Ready to Move" && !ageOfProperty) {
       missing.push("ageOfProperty (for Ready to Move)");
@@ -347,11 +350,11 @@ const PropertyProfile = ({ data = {}, onNext, updateData,isProject }) => {
     if (status === "Under Construction" && !possession) {
       missing.push("possession (for Under Construction)");
     }
-  
+
     // ✅ Optional fields (balconies, poojaRoom) are skipped intentionally
-  
+
     const isValid = missing.length === 0;
-  
+
     return { isValid, missing };
   }
   const formValues = {
@@ -367,17 +370,15 @@ const PropertyProfile = ({ data = {}, onNext, updateData,isProject }) => {
     ageOfProperty,
     possession,
   };
-  
+
   const allApartmentFieldsFilled = validateBaseResidential(formValues);
-      
+
   // Final form validation
   const isFormComplete = isPlotOrLand
     ? (() => {
-      console.log("allPlotFieldsFilled::", allPlotFieldsFilled);
       return allPlotFieldsFilled;
     })()
     : (() => {
-      console.log("allApartmentFieldsFilled::", allApartmentFieldsFilled.isValid);
       return allApartmentFieldsFilled.isValid;
     })();
 
@@ -395,10 +396,10 @@ const PropertyProfile = ({ data = {}, onNext, updateData,isProject }) => {
     <div className="space-y-8">
       <div>
         <h2 className="font-serif text-3xl font-bold text-blue-900 mb-2">
-        {!isProject?"Property":"Project"} Profile
+          {!isProject ? "Property" : "Project"} Profile
         </h2>
         <p className="font-roboto text-gray-600">
-          Tell us more about your {!isProject?"Property":"Project"} specifications
+          Tell us more about your {!isProject ? "Property" : "Project"} specifications
         </p>
       </div>
 
@@ -1237,27 +1238,27 @@ const PropertyProfile = ({ data = {}, onNext, updateData,isProject }) => {
           )}
         </div>
       )}
-<div className="m-3">
-  <p className="text-green-500 text-xs font-semibold mb-2">
-    ✓ Missing Fields
-  </p>
+      <div className="m-3">
+        <p className="text-green-500 text-xs font-semibold mb-2">
+          ✓ Missing Fields
+        </p>
 
-  {/* Determine which list to show */}
-  {(isPlotOrLand ? missing : allApartmentFieldsFilled?.missing)?.length ? (
-    (isPlotOrLand ? missing : allApartmentFieldsFilled?.missing)?.map((item, index) => (
-      <span
-        key={index}
-        className="text-white text-xs capitalize ml-2 border rounded bg-red-500 px-2 py-1 mb-1 inline-block"
-      >
-        ✕ {item}
-      </span>
-    ))
-  ) : (
-    <p className="text-gray-400 text-xs ml-2 italic">
-      All required fields are filled ✔️
-    </p>
-  )}
-</div>
+        {/* Determine which list to show */}
+        {(isPlotOrLand ? missing : allApartmentFieldsFilled?.missing)?.length ? (
+          (isPlotOrLand ? missing : allApartmentFieldsFilled?.missing)?.map((item, index) => (
+            <span
+              key={index}
+              className="text-white text-xs capitalize ml-2 border rounded bg-red-500 px-2 py-1 mb-1 inline-block"
+            >
+              ✕ {item}
+            </span>
+          ))
+        ) : (
+          <p className="text-gray-400 text-xs ml-2 italic">
+            All required fields are filled ✔️
+          </p>
+        )}
+      </div>
       {<button
         onClick={handleContinue}
         disabled={!isFormComplete}
