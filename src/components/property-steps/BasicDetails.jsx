@@ -1,22 +1,42 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import ApiService from '../../hooks/ApiService';
 
 const BasicDetails = ({ data, updateData, onNext, isEditMode, isProject }) => {
-  // 🧩 Directly use data from props for form fields
-  const [listingType, setListingType] = useState(data?.marketType || 'Sale');
-  const [propertyType, setPropertyType] = useState(data?.propertyKind || 'residential');
-  const [propertySubtype, setPropertySubtype] = useState(data?.propertySubtype || '');
+  // 🧠 Use refs to prevent infinite loops
+  const isInitialMount = useRef(true);
+  const previousDataRef = useRef(data);
+
+  // States
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [title, setTitle] = useState(data.title || '');
+  const [listingType, setListingType] = useState(data?.marketType || '');
+  const [propertyType, setPropertyType] = useState(data?.category?.catType || data?.propertyKind.trim().toLowerCase() || 'residential');
+  const [propertySubtype, setPropertySubtype] = useState(data?.categoryName || data?.propertySubtype || '');
+  const [title, setTitle] = useState(data?.title || '');
   const [selectedCategoryId, setSelectedCategoryId] = useState(data?.categoryId || '');
-  const [userProfile, setUserProfile] = useState({});
+  const [catLabel, setCatLabel] = useState('');
+  const [titleError, setTitleError] = useState('');
   
-  // Custom order for category sorting
-  const customOrder = ["Plot", "Flat/Apartment", "IndependentHouse/Villa", "Land", "FarmHouse"];
-  const [autoSaveTimer, setAutoSaveTimer] = useState(null);
+  // 👤 Get user profile from localStorage
+  const [userProfile, setUserProfile] = useState({});
 
-  // 🧩 Fetch categories on mount
+  // 🏷️ Update catLabel when propertySubtype changes
+  useEffect(() => {
+    switch (propertySubtype) {
+      case "Flat/Apartment":
+        setCatLabel("Apartment Name");
+        break;
+      case "IndependentHouse/Villa":
+      case "Independent House / Villa":
+        setCatLabel("Society / Villa Name");
+        break;
+      default:
+        setCatLabel("Name");
+        break;
+    }
+  }, [propertySubtype]);
+
+  // 📦 Fetch categories on mount
   useEffect(() => {
     const fetchCategories = async () => {
       const clientToken = localStorage.getItem('token');
@@ -27,7 +47,6 @@ const BasicDetails = ({ data, updateData, onNext, isEditMode, isProject }) => {
             'Content-Type': 'application/json',
           },
         });
-
         if (response?.categories) {
           setCategories(response.categories);
         }
@@ -37,88 +56,79 @@ const BasicDetails = ({ data, updateData, onNext, isEditMode, isProject }) => {
         setLoading(false);
       }
     };
-
     fetchCategories();
   }, []);
 
-  // 🧩 Prefill fields when editing existing property
+  // 📥 Prefill when editing – only when data actually changes
   useEffect(() => {
-    if (isEditMode && data) {
-      const userData = localStorage.getItem("adminDetails");
-      if (userData) {
-        try {
-          setUserProfile(JSON.parse(userData));
-        } catch (e) {
-          console.error("Error parsing user profile:", e);
-        }
-      }
-      
-      setListingType(data.marketType || 'sale');
-      setPropertyType(data.propertyKind || 'residential');
-      setPropertySubtype(data.propertySubtype || '');
+    if (!isEditMode || !data) return;
+
+    const dataChanged = JSON.stringify(previousDataRef.current) !== JSON.stringify(data);
+    if (dataChanged) {
+      const catName = data.categoryName?.trim() || data.propertySubtype?.trim() || '';
+      const catType = data.catType?.toLowerCase() || data.propertyKind?.toLowerCase() || 'residential';
+
+      setListingType(data.marketType);
+      setPropertyType(catType);
+      setPropertySubtype(catName);
       setTitle(data.title || '');
       setSelectedCategoryId(data.categoryId || '');
+
+      previousDataRef.current = data;
     }
   }, [isEditMode, data]);
 
-  // 🧩 Auto-save function
-  const autoSaveData = () => {
-    if (autoSaveTimer) {
-      clearTimeout(autoSaveTimer);
+  // 👤 Load user profile from localStorage
+  useEffect(() => {
+    const userData = localStorage.getItem("adminDetails");
+    if (userData) {
+      try {
+        setUserProfile(JSON.parse(userData));
+      } catch (e) {
+        console.error("Error parsing user profile:", e);
+      }
     }
+  }, []);
 
-    const timer = setTimeout(() => {
-      const selectedCategory = categories.find(
-        (cat) => cat.id === selectedCategoryId || cat.name === propertySubtype
-      );
-
-      updateData({
-        categoryId: selectedCategory?.id || '',
-        propertyName: title,
-        title,
-        marketType: listingType,
-        propertyKind: propertyType,
-        propertySubtype,
-        catType: selectedCategory?.catType ||
-          (propertyType === 'residential' ? 'Residential' : 'Commercial'),
-      });
-
-      console.log("Auto-saved basic details");
-    }, 500); // 500ms debounce delay
-
-    setAutoSaveTimer(timer);
+  // ✅ Title validation
+  const validateTitle = (value) => {
+    if (!value.trim()) {
+      setTitleError('Property title is required');
+      return false;
+    }
+    if (value.trim().length < 5) {
+      setTitleError('Property title must be at least 5 characters long');
+      return false;
+    }
+    if (value.trim().length > 70) {
+      setTitleError('Property title cannot exceed 70 characters');
+      return false;
+    }
+    setTitleError('');
+    return true;
   };
 
-  // 🧩 Trigger auto-save when relevant fields change
-  useEffect(() => {
-    if (propertySubtype && title) {
-      autoSaveData();
-    }
-    
-    // Cleanup timer on unmount
-    return () => {
-      if (autoSaveTimer) {
-        clearTimeout(autoSaveTimer);
-      }
-    };
-  }, [listingType, propertyType, propertySubtype, title, selectedCategoryId]);
+  const handleTitleChange = (e) => {
+    const value = e.target.value;
+    setTitle(value);
+    validateTitle(value);
+  };
 
-  // 🏁 Handle Continue button
+  // 🚀 Continue handler
   const handleContinue = () => {
-    // Ensure final save before proceeding
+    if (!validateTitle(title)) return;
+
     const selectedCategory = categories.find(
       (cat) => cat.id === selectedCategoryId || cat.name === propertySubtype
     );
 
     updateData({
       categoryId: selectedCategory?.id || '',
-      propertyName: title,
-      title,
+      title: title.trim(),
       marketType: listingType,
       propertyKind: propertyType,
       propertySubtype,
-      catType: selectedCategory?.catType ||
-        (propertyType === 'residential' ? 'Residential' : 'Commercial'),
+      catType: selectedCategory?.catType || (propertyType === 'residential' ? 'Residential' : 'Commercial'),
     });
 
     onNext();
@@ -128,14 +138,16 @@ const BasicDetails = ({ data, updateData, onNext, isEditMode, isProject }) => {
   const residentialTypes = categories.filter(
     (cat) => cat.catType?.toLowerCase() === 'residential'
   );
-
   const commercialTypes = categories.filter(
     (cat) => cat.catType?.toLowerCase() === 'commercial'
   );
-
   const subtypes = propertyType === 'residential' ? residentialTypes : commercialTypes;
 
-  // 🧩 Sort subtypes in custom order
+  // 🧩 Sort subtypes based on listingType (Sale/Rent)
+  const customOrder = listingType.toLowerCase() === 'sale'
+    ? ["Plot", "Flat/Apartment", "IndependentHouse/Villa", "Land", "FarmHouse"]
+    : ["Flat/Apartment", "IndependentHouse/Villa", "FarmHouse", "Plot", "Land"];
+
   const sortedSubtypes = [...subtypes].sort((a, b) => {
     const indexA = customOrder.indexOf(a.name);
     const indexB = customOrder.indexOf(b.name);
@@ -164,12 +176,13 @@ const BasicDetails = ({ data, updateData, onNext, isEditMode, isProject }) => {
             <button
               key={type}
               onClick={() => setListingType(type)}
-              className={`px-6 py-2.5 rounded-full border-2 font-roboto capitalize transition-all ${listingType === type
+              className={`px-6 py-2.5 rounded-full border-2 font-roboto capitalize transition-all ${
+                listingType === type
                   ? 'bg-orange-500 border-orange-500 text-white'
                   : 'bg-white border-gray-300 text-gray-700 hover:border-orange-300'
-                }`}
+              }`}
             >
-              {type.charAt(0).toUpperCase() + type.slice(1)}
+              {type}
             </button>
           ))}
         </div>
@@ -204,11 +217,10 @@ const BasicDetails = ({ data, updateData, onNext, isEditMode, isProject }) => {
         {loading ? (
           <p className="text-gray-500">Loading property types...</p>
         ) : (
-          <div className="flex flex-wrap gap-3">
+          <div className="mt-4 flex flex-wrap gap-3">
             {sortedSubtypes.map((subtype) => {
               const isActive =
                 propertySubtype?.toLowerCase().trim() === subtype.name?.toLowerCase().trim();
-
               return (
                 <button
                   key={subtype.id}
@@ -216,10 +228,11 @@ const BasicDetails = ({ data, updateData, onNext, isEditMode, isProject }) => {
                     setPropertySubtype(subtype.name);
                     setSelectedCategoryId(subtype.id);
                   }}
-                  className={`px-5 py-2.5 rounded-full border-2 font-roboto transition-all ${isActive
+                  className={`px-5 py-2.5 rounded-full border-2 font-roboto transition-all ${
+                    isActive
                       ? 'bg-orange-500 border-orange-500 text-white'
                       : 'bg-white border-gray-300 text-gray-700 hover:border-orange-300'
-                    }`}
+                  }`}
                 >
                   {subtype.name}
                 </button>
@@ -228,25 +241,32 @@ const BasicDetails = ({ data, updateData, onNext, isEditMode, isProject }) => {
           </div>
         )}
 
-        {/* 🏠 Property Title */}
+        {/* 🏷️ Property Title */}
         <div className="mt-4">
           <label className="block font-roboto text-base font-medium text-gray-700 mb-3">
-            {!isProject ? "Property" : "Project"} Title
+            {!isProject ? "Property Title" : "Project Title"}
           </label>
           <input
             type="text"
-            placeholder={`Enter Property Title ( ${propertySubtype} For sale )`}
+            placeholder={`Enter ${!isProject ? "Property Title" : "Project Title"} (${propertySubtype || 'Property'} for ${listingType.toLowerCase()})`}
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg font-roboto focus:outline-none focus:ring-2 focus:ring-orange-400"
+            onChange={handleTitleChange}
+            className="w-full px-4 text-gray-600 py-2 border border-gray-300 rounded-lg font-roboto focus:outline-none focus:ring-2 focus:ring-orange-400"
+            maxLength={70}
           />
+          <div className="flex justify-between mt-1">
+            {titleError && <p className="text-red-500 text-sm font-roboto">{titleError}</p>}
+            <p className={`text-sm font-roboto ml-auto ${title.length > 70 ? 'text-red-500' : 'text-gray-500'}`}>
+              {title.length}/70
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Continue */}
+      {/* Continue Button */}
       <button
         onClick={handleContinue}
-        disabled={!propertySubtype || !title}
+        disabled={!propertySubtype || !title || title.trim().length < 5 || title.trim().length > 70 || titleError}
         className="bg-blue-900 hover:bg-blue-800 text-white font-roboto font-medium px-10 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isEditMode ? 'Save & Continue' : 'Continue'}

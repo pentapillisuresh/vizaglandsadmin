@@ -1,7 +1,10 @@
+// admin/PropertyProfile.js
+
 import { useState, useEffect } from "react";
 
 const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
   // Property subtype
+
   const [propertySubtype, setPropertySubtype] = useState(data.propertySubtype || "");
 
   // --- Plot / Land fields ---
@@ -11,9 +14,8 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
   const [length, setLength] = useState("");
   const [breadth, setBreadth] = useState("");
   const [facing, setFacing] = useState("");
-  const [frontage, setFrontage] = useState("");
-  const [price, setPrice] = useState(null);
-  const [advance, setAdvance] = useState(null);
+  const [price, setPrice] = useState("");
+  const [advance, setAdvance] = useState("");
   const [showPlotSize, setShowPlotSize] = useState(false);
   const [plotSize, setPlotSize] = useState(null);
   const [showUDS_area, setShowUDS_area] = useState(false);
@@ -137,14 +139,12 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
   // --- Initialize state on edit/add ---
   useEffect(() => {
     if (!data) return;
-
-    setPlotArea(data?.propertyProfile?.plotArea || 1);
-    setLandArea(data?.propertyProfile?.landArea || 1);
+    setPlotArea(data?.propertyProfile?.plotArea || 0);
+    setLandArea(data?.propertyProfile?.landArea || 0);
     setPlotAreaUnit(data?.propertyProfile?.plotAreaUnit || (isLand ? "acres" : isPlot ? "sq yards" : "sqft"));
     setLength(data?.propertyProfile?.length || "");
     setBreadth(data?.propertyProfile?.breath || "");
     setFacing(data?.propertyProfile?.facing || "");
-    setFrontage(data?.propertyProfile?.frontage || "");
     setPrice(data?.price || null);
     setAdvance(data?.advance || null);
     setBedrooms(data?.propertyProfile?.bedrooms || null);
@@ -153,18 +153,11 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
     setPoojaRoom(data?.propertyProfile?.poojaRooms ?? true);
     setCarpetArea(data?.propertyProfile?.carpetArea || null);
     setBuiltArea(data?.propertyProfile?.buildArea || null);
-    if (data?.propertyProfile?.buildArea) {
-      setShowBuiltArea(true)
-    }
+    if (data?.propertyProfile?.buildArea) setShowBuiltArea(true);
     setSuperBuiltArea(data?.propertyProfile?.superBuildArea || null);
-    if (data?.propertyProfile?.superBuildArea) {
-      setShowSuperBuiltArea(true)
-    }
-
+    if (data?.propertyProfile?.superBuildArea) setShowSuperBuiltArea(true);
     setUDS_area(data?.propertyProfile?.UDS_area || "");
-    if (data?.propertyProfile?.UDS_area) {
-      setShowUDS_area(true)
-    }
+    if (data?.propertyProfile?.UDS_area) setShowUDS_area(true);
     setAreaUnit(data?.propertyProfile?.areaUnit || (isLand ? "acres" : "sqft"));
     setParkingType(data?.propertyProfile?.parkingType || "");
     setClosedParking(data?.propertyProfile?.closedParking || 0);
@@ -192,18 +185,16 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
     setParkingSpaces(data?.propertyProfile?.parkingSpaces || null);
     setSecurityAvailable(data?.propertyProfile?.securityAvailable || false);
     setWaterSupply(data?.propertyProfile?.waterSupply || "");
-    setShowBuiltArea(!!data?.propertyProfile?.builtArea);
-    setShowSuperBuiltArea(!!data?.propertyProfile?.superBuiltArea);
+    setShowBuiltArea(!!data?.propertyProfile?.buildArea);
+    setShowSuperBuiltArea(!!data?.propertyProfile?.superBuildArea);
     setShowCommercialAddons(canHaveCommercialAddons);
   }, [data, propertySubtype]);
 
   // --- Payload creation for Add/Edit ---
   const handleContinue = () => {
-
     const payload = { propertySubtype, price };
 
-    // Fixed: Use property assignment instead of function call
-    if (data?.marketType.toLowerCase() !== 'sale') {
+    if (data?.marketType?.toLowerCase() !== 'sale') {
       payload.advance = advance;
     }
 
@@ -215,14 +206,14 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
         length,
         breath: breadth,
         price,
-        ...(isLand ? { frontage: frontage ?? "" } : { facing }),
+        ...(isLand ? {} : { facing }),
       };
     } else {
       payload.propertyProfile = {
         bedrooms,
         bathrooms,
         balconies,
-        poojaRooms:poojaRoom,
+        poojaRooms: poojaRoom,
         carpetArea,
         buildArea: builtArea,
         superBuildArea: superBuiltArea,
@@ -236,7 +227,7 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
         parkingSpaces,
         status,
         possession,
-        ...(needsFloorDetails ? { totalFloors, floorNumber:propertyOnFloor } : {}),
+        ...(needsFloorDetails ? { totalFloors, floorNumber: propertyOnFloor } : {}),
         ...(isFlat ? { flatNumber } : {}),
         ...(isOfficeSpace ? { officeNumber, cabins, conferenceRooms, workstations } : {}),
         ...(isShopShowroom ? { shopNumber, parkingSpaces } : {}),
@@ -261,61 +252,41 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
   };
 
   // --- Form validations ---
-  // Plot/Land validation
   function validatePlotFields({
     price,
     plotAreaUnit,
     length,
     breadth,
     isLand,
-    frontage,
     landArea,
     plotArea,
     facing
   }) {
     const missing = [];
-
-    // 🏷️ Common required fields
     if (!price) missing.push("price");
     if (!plotAreaUnit) missing.push("plotAreaUnit");
 
-    // 📏 Plot-only fields (not required for land)
     if (!isLand) {
       if (!length) missing.push("length");
-      if (!breadth) missing.push("breadth");
-    }
-
-    // 🧱 Conditional validation
-    if (isLand) {
-      // Land: frontage & landArea required
-      if (!frontage) missing.push("frontage");
-      if (!landArea) missing.push("landArea");
-    } else {
-      // Plot: plotArea & facing required
+      if (!breadth || Number(breadth) <= 0) missing.push("breadth");
       if (!plotArea) missing.push("plotArea");
       if (!facing) missing.push("facing");
+    } else {
+      if (!landArea) missing.push("landArea");
     }
-
-    return {
-      isValid: missing.length === 0,
-      missing,
-    };
+    return { isValid: missing.length === 0, missing };
   }
 
-  // Example usage:
   const { isValid: allPlotFieldsFilled, missing } = validatePlotFields({
     price,
     plotAreaUnit,
     length,
     breadth,
     isLand,
-    frontage,
     landArea,
     plotArea,
     facing,
   });
-
-  // At least one area must be provided
 
   function validateBaseResidential({
     bedrooms,
@@ -331,32 +302,21 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
     possession
   }) {
     const missing = [];
-
-    // 🏠 Required core fields
     if (!areaUnit) missing.push("areaUnit");
     if (!totalFloors) missing.push("totalFloors");
     if (!status) missing.push("status");
 
-    // 📐 At least one area required
     const hasAtLeastOneArea = [carpetArea, builtArea, superBuiltArea].some(
       area => area != null && area !== ""
     );
     if (!hasAtLeastOneArea) missing.push("Area (carpet/built/superBuilt)");
 
-    // 🧱 Conditional checks based on property status
-    if (status === "Ready to Move" && !ageOfProperty) {
-      missing.push("ageOfProperty (for Ready to Move)");
-    }
-    if (status === "Under Construction" && !possession) {
-      missing.push("possession (for Under Construction)");
-    }
+    if (status === "Ready to Move" && !ageOfProperty) missing.push("ageOfProperty (for Ready to Move)");
+    if (status === "Under Construction" && !possession) missing.push("possession (for Under Construction)");
 
-    // ✅ Optional fields (balconies, poojaRoom) are skipped intentionally
-
-    const isValid = missing.length === 0;
-
-    return { isValid, missing };
+    return { isValid: missing.length === 0, missing };
   }
+
   const formValues = {
     bedrooms,
     bathrooms,
@@ -372,15 +332,7 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
   };
 
   const allApartmentFieldsFilled = validateBaseResidential(formValues);
-
-  // Final form validation
-  const isFormComplete = isPlotOrLand
-    ? (() => {
-      return allPlotFieldsFilled;
-    })()
-    : (() => {
-      return allApartmentFieldsFilled.isValid;
-    })();
+  const isFormComplete = isPlotOrLand ? allPlotFieldsFilled : allApartmentFieldsFilled.isValid;
 
   // --- Unit field helpers ---
   const getUnitNumberLabel = () => isFlat ? "Total Units" : isOfficeSpace ? "Office Number" : isShopShowroom ? "Shop Number" : "Unit Number";
@@ -399,26 +351,12 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
           {!isProject ? "Property" : "Project"} Profile
         </h2>
         <p className="font-roboto text-gray-600">
-          Tell us more about your {!isProject ? "Property" : "Project"} specifications
+          Tell us more about your {!isProject ? "property" : "project"} specifications
         </p>
       </div>
 
       {isPlotOrLand ? (
         <div className="space-y-6">
-          {/* {isPlot && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Plot Number
-              </label>
-              <input
-                type="text"
-                value={plotNumber}
-                onChange={(e) => setPlotNumber(e.target.value)}
-                placeholder="Enter plot number"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-              />
-            </div>
-          )} */}
           <div>
             <label className="block font-roboto text-sm font-medium text-gray-700 mt-8 mb-4">
               {data?.marketType?.toLowerCase() === 'sale' ? "Price" : "Rent"} (₹) <span className="text-red-500">*</span>
@@ -431,37 +369,35 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
               className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none font-roboto"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            {
-              isPlot ? (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Plot Area <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={plotArea}
-                    onChange={(e) => setPlotArea(e.target.value)}
-                    placeholder="Enter area"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Land Area <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={landArea}
-                    onChange={(e) => setLandArea(e.target.value)}
-                    placeholder="Enter area"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-              )
-            }
 
+          <div className="grid grid-cols-2 gap-4">
+            {isPlot ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Plot Area <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={plotArea}
+                  onChange={(e) => setPlotArea(e.target.value)}
+                  placeholder="Enter area"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Land Area <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={landArea}
+                  onChange={(e) => setLandArea(e.target.value)}
+                  placeholder="Enter area"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Unit <span className="text-red-500">*</span>
@@ -480,10 +416,11 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
               </select>
             </div>
           </div>
-          <p className="font-roboto mb-3 font-bold text-black-600">
+
+          <p className="font-roboto mb-3 font-bold text-gray-700">
             {isPlot
-              ? `${Math.round(price / plotArea) ?? 0}  per ${plotAreaUnit}`
-              : `${Math.round(price / landArea) ?? 0} per ${plotAreaUnit}`}
+              ? `${Math.round(price / plotArea) || 0} per ${plotAreaUnit}`
+              : `${Math.round(price / landArea) || 0} per ${plotAreaUnit}`}
           </p>
 
           {!isLand ? (
@@ -506,7 +443,7 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
                   </label>
                   <input
                     type="number"
-                    value={breadth}
+                    value={breadth ?? ""}
                     onChange={(e) => setBreadth(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                   />
@@ -533,111 +470,103 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
                 </div>
               </div>
             </>
-          ) : (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Roadfacing (in ft) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={frontage}
-                onChange={(e) => setFrontage(e.target.value)}
-                placeholder="e.g., 100"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-              />
-            </div>
-          )}
+          ) : null}
         </div>
       ) : (
         <div className="space-y-6">
-          {(isFlatOrVilla) && (
-            <div>
-              <label className="block font-medium text-gray-700 mb-2">
-                Bedrooms <span className="text-red-500">*</span>
-              </label>
-              <div className="flex flex-wrap gap-3">
-                {[1, 2, 3, 4, 5].map((num) => (
+          {/* Residential / Commercial fields */}
+          {isFlatOrVilla && (
+            <>
+              <div>
+                <label className="block font-medium text-gray-700 mb-2">
+                  Bedrooms <span className="text-red-500">*</span>
+                </label>
+                <div className="flex flex-wrap gap-3">
+                  {[1, 2, 3, 4, 5].map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => setBedrooms(num)}
+                      className={`px-4 py-2 rounded-full border-2 ${bedrooms === num
+                        ? "bg-orange-500 text-white border-orange-500"
+                        : "border-gray-300"
+                        }`}
+                    >
+                      {num} BHK
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-medium text-gray-700 mb-2">
+                  Bathrooms <span className="text-red-500">*</span>
+                </label>
+                <div className="flex flex-wrap gap-3">
+                  {[1, 2, 3, 4, 5].map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => setBathrooms(num)}
+                      className={`px-4 py-2 rounded-full border-2 ${bathrooms === num
+                        ? "bg-orange-500 text-white border-orange-500"
+                        : "border-gray-300"
+                        }`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-medium text-gray-700 mb-2">
+                  Balconies <span className="text-red-500">*</span>
+                </label>
+                <div className="flex flex-wrap gap-3">
+                  {[0, 1, 2, 3].map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => setBalconies(num)}
+                      className={`px-4 py-2 rounded-full border-2 ${balconies === num
+                        ? "bg-orange-500 text-white border-orange-500"
+                        : "border-gray-300"
+                        }`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-medium text-gray-700 mb-2">
+                  Pooja Room <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-3">
                   <button
-                    key={num}
-                    onClick={() => setBedrooms(num)}
-                    className={`px-4 py-2 rounded-full border-2 ${bedrooms === num
+                    type="button"
+                    onClick={() => setPoojaRoom(true)}
+                    className={`px-5 py-2 rounded-full border-2 ${poojaRoom === true
                       ? "bg-orange-500 text-white border-orange-500"
-                      : "border-gray-300"
+                      : "border-gray-300 bg-white text-gray-700"
                       }`}
                   >
-                    {num} BHK
+                    Yes
                   </button>
-                ))}
+                  <button
+                    type="button"
+                    onClick={() => setPoojaRoom(false)}
+                    className={`px-5 py-2 rounded-full border-2 ${poojaRoom === false
+                      ? "bg-orange-500 text-white border-orange-500"
+                      : "border-gray-300 bg-white text-gray-700"
+                      }`}
+                  >
+                    No
+                  </button>
+                </div>
               </div>
-            </div>
+            </>
           )}
 
-          {(isFlatOrVilla) && (
-            <div>
-              <label className="block font-medium text-gray-700 mb-2">
-                Bathrooms <span className="text-red-500">*</span>
-              </label>
-              <div className="flex flex-wrap gap-3">
-                {[1, 2, 3, 4, 5].map((num) => (
-                  <button
-                    key={num}
-                    onClick={() => setBathrooms(num)}
-                    className={`px-4 py-2 rounded-full border-2 ${bathrooms === num
-                      ? "bg-orange-500 text-white border-orange-500"
-                      : "border-gray-300"
-                      }`}
-                  >
-                    {num}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {(isFlatOrVilla) && (
-            <div>
-              <label className="block font-medium text-gray-700 mb-2">
-                Balconies <span className="text-red-500">*</span>
-              </label>
-              <div className="flex flex-wrap gap-3">
-                {[0, 1, 2, 3].map((num) => (
-                  <button
-                    key={num}
-                    onClick={() => setBalconies(num)}
-                    className={`px-4 py-2 rounded-full border-2 ${balconies === num
-                      ? "bg-orange-500 text-white border-orange-500"
-                      : "border-gray-300"
-                      }`}
-                  >
-                    {num}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {(isFlatOrVilla) && (
-            <div>
-              <label className="block font-medium text-gray-700 mb-2">
-                Pooja Room <span className="text-red-500">*</span>
-              </label>
-              <div className="flex gap-3">
-                {["Yes", "No"].map((option) => (
-                  <button
-                    key={option}
-                    onClick={() => setPoojaRoom(option)}
-                    className={`px-5 py-2 rounded-full border-2 ${poojaRoom === option
-                      ? "bg-orange-500 text-white border-orange-500"
-                      : "border-gray-300"
-                      }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {/* 💵 Price Input */}
           <div>
             <label className="block font-roboto text-sm font-medium text-gray-700 mt-8 mb-4">
               Price (₹) <span className="text-red-500">*</span>
@@ -680,9 +609,10 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
                 </div>
               </div>
 
-              <p className="font-roboto mb-3 bold text-black-600">
-                {Math.round(price / carpetArea)} per {areaUnit}
+              <p className="font-roboto mb-3 font-bold text-gray-700">
+                {Math.round(price / carpetArea) || 0} per {areaUnit}
               </p>
+
               <div className="flex flex-wrap gap-3 mb-6">
                 {!showBuiltArea && (
                   <button
@@ -716,7 +646,6 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
                     + Add Plot Size
                   </button>
                 )}
-
               </div>
 
               {showBuiltArea && (
@@ -837,10 +766,9 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
             </div>
           </div>
 
-          {/* Moved Parking and Units section here */}
+          {/* Parking and Units */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-6">
             <div className="flex items-center gap-6">
-              {/* Closed Parking */}
               <div className="flex flex-col">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Closed Parking <span className="text-red-500">*</span>
@@ -872,8 +800,7 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
                 )}
               </div>
 
-              {/* Open Parking */}
-              <div className="flex flex-col">
+              <div className="flex flex-col relative">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Open Parking <span className="text-red-500">*</span>
                 </label>
@@ -900,11 +827,12 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
                   </button>
                 </div>
                 {!validateOpenParking(openParking) && (
-                  <p className="text-red-500 text-xs mt-1">Maximum 10 allowed</p>
+                  <p className="text-red-500 text-xs mt-1 absolute -bottom-5 left-0 whitespace-nowrap">
+                    Maximum 10 allowed
+                  </p>
                 )}
               </div>
 
-              {/* Total Units - Moved here beside parking */}
               {isFlat && (
                 <div className="flex flex-col">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -936,30 +864,32 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
               />
             </div>
           )}
+
           {needsFloorDetails && (
             <div className="space-y-4 pt-4 border-t border-gray-200">
               <h3 className="text-lg font-semibold text-gray-800">Floor Details</h3>
               <p className="text-sm text-gray-600">Total no of floors and your floor details</p>
 
               <div className="grid grid-cols-2 gap-4">
-
-                {!isVilla && <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Property on Floor <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={propertyOnFloor}
-                    onChange={(e) => handlePropertyOnFloorChange(e.target.value)}
-                    placeholder="Enter floor number (0-99)"
-                    min="0"
-                    max="99"
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-orange-500"
-                  />
-                  {propertyOnFloor !== "" && !validatePropertyOnFloor(propertyOnFloor) && (
-                    <p className="text-red-500 text-xs mt-1">Please enter a value between 0 and 99</p>
-                  )}
-                </div>}
+                {!isVilla && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Property on Floor <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={propertyOnFloor}
+                      onChange={(e) => handlePropertyOnFloorChange(e.target.value)}
+                      placeholder="Enter floor number (0-99)"
+                      min="0"
+                      max="99"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-orange-500"
+                    />
+                    {propertyOnFloor !== "" && !validatePropertyOnFloor(propertyOnFloor) && (
+                      <p className="text-red-500 text-xs mt-1">Please enter a value between 0 and 99</p>
+                    )}
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Total Floors <span className="text-red-500">*</span>
@@ -981,18 +911,6 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
             </div>
           )}
 
-          {/* <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Parking Spaces
-            </label>
-            <input
-              type="number"
-              value={parkingSpaces}
-              onChange={(e) => setParkingSpaces(e.target.value)}
-              placeholder="Number of parking slots"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-            />
-          </div> */}
           <div>
             <label className="block font-medium text-gray-700 mb-2">
               Availability Status <span className="text-red-500">*</span>
@@ -1001,7 +919,7 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
               {["Ready to Move", "Under Construction"].map((opt) => (
                 <button
                   key={opt}
-                  onClick={() => setStatus((opt))}
+                  onClick={() => setStatus(opt)}
                   className={`px-5 py-2 rounded-full border-2 ${status === opt
                     ? "bg-orange-500 text-white border-orange-500"
                     : "border-gray-300"
@@ -1037,6 +955,7 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
                 type="number"
                 value={possession}
                 onChange={(e) => setPossession(e.target.value)}
+                placeholder="Enter months"
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-orange-500"
               />
             </div>
@@ -1134,7 +1053,6 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
                       />
                       <span className="ml-2 text-sm font-medium text-gray-700">Pantry Available</span>
                     </label>
-
                     <label className="flex items-center cursor-pointer">
                       <input
                         type="checkbox"
@@ -1144,7 +1062,6 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
                       />
                       <span className="ml-2 text-sm font-medium text-gray-700">Washroom Available</span>
                     </label>
-
                     <label className="flex items-center cursor-pointer">
                       <input
                         type="checkbox"
@@ -1154,7 +1071,6 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
                       />
                       <span className="ml-2 text-sm font-medium text-gray-700">Lift Available</span>
                     </label>
-
                     <label className="flex items-center cursor-pointer">
                       <input
                         type="checkbox"
@@ -1164,7 +1080,6 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
                       />
                       <span className="ml-2 text-sm font-medium text-gray-700">Power Backup</span>
                     </label>
-
                     <label className="flex items-center cursor-pointer">
                       <input
                         type="checkbox"
@@ -1174,7 +1089,6 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
                       />
                       <span className="ml-2 text-sm font-medium text-gray-700">AC Available</span>
                     </label>
-
                     <label className="flex items-center cursor-pointer">
                       <input
                         type="checkbox"
@@ -1187,63 +1101,55 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
                   </div>
 
                   {isOfficeSpace && (
-                    <>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Cabins
-                          </label>
-                          <input
-                            type="number"
-                            value={cabins}
-                            onChange={(e) => setCabins(e.target.value)}
-                            placeholder="No. of cabins"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Conference Rooms
-                          </label>
-                          <input
-                            type="number"
-                            value={conferenceRooms}
-                            onChange={(e) => setConferenceRooms(e.target.value)}
-                            placeholder="No. of rooms"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Workstations
-                          </label>
-                          <input
-                            type="number"
-                            value={workstations}
-                            onChange={(e) => setWorkstations(e.target.value)}
-                            placeholder="No. of desks"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                          />
-                        </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Cabins
+                        </label>
+                        <input
+                          type="number"
+                          value={cabins}
+                          onChange={(e) => setCabins(e.target.value)}
+                          placeholder="No. of cabins"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        />
                       </div>
-                    </>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Conference Rooms
+                        </label>
+                        <input
+                          type="number"
+                          value={conferenceRooms}
+                          onChange={(e) => setConferenceRooms(e.target.value)}
+                          placeholder="No. of rooms"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Workstations
+                        </label>
+                        <input
+                          type="number"
+                          value={workstations}
+                          onChange={(e) => setWorkstations(e.target.value)}
+                          placeholder="No. of desks"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        />
+                      </div>
+                    </div>
                   )}
-
-
                 </div>
               )}
             </div>
           )}
         </div>
       )}
-      <div className="m-3">
-        <p className="text-green-500 text-xs font-semibold mb-2">
-          ✓ Missing Fields
-        </p>
 
-        {/* Determine which list to show */}
+      {/* Missing Fields Display */}
+      <div className="m-3">
+        <p className="text-green-500 text-xs font-semibold mb-2">✓ Missing Fields</p>
         {(isPlotOrLand ? missing : allApartmentFieldsFilled?.missing)?.length ? (
           (isPlotOrLand ? missing : allApartmentFieldsFilled?.missing)?.map((item, index) => (
             <span
@@ -1254,12 +1160,11 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
             </span>
           ))
         ) : (
-          <p className="text-gray-400 text-xs ml-2 italic">
-            All required fields are filled ✔️
-          </p>
+          <p className="text-gray-400 text-xs ml-2 italic">All required fields are filled ✔️</p>
         )}
       </div>
-      {<button
+
+      <button
         onClick={handleContinue}
         disabled={!isFormComplete}
         className={`bg-blue-900 hover:bg-blue-800 text-white font-roboto font-medium
@@ -1267,7 +1172,7 @@ const PropertyProfile = ({ data = {}, onNext, updateData, isProject }) => {
                      disabled:opacity-50 disabled:cursor-not-allowed`}
       >
         Continue
-      </button>}
+      </button>
     </div>
   );
 };

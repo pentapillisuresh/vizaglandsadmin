@@ -1,8 +1,12 @@
+// admin/PhotosVideos.js
+
+'use client';
+
 import { useState, useEffect, useRef } from "react";
 import { Upload, X } from "lucide-react";
 import ApiService from "../../hooks/ApiService";
 
-const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
+const PhotosVideos = ({ data = {}, updateData, onNext, isProject }) => {
   const [dragActive, setDragActive] = useState(false);
   const existingPhotos = data.photos;
   const existingVideo = data.videos;
@@ -29,14 +33,10 @@ const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
       
       img.crossOrigin = "anonymous";
       img.onload = () => {
-        // Set canvas dimensions to match image
         canvas.width = img.width;
         canvas.height = img.height;
-        
-        // Draw original image
         ctx.drawImage(img, 0, 0);
         
-        // Watermark settings
         const watermarkText = "vmrdaplots.com";
         ctx.font = `bold ${Math.max(canvas.width * 0.04, 24)}px Arial`;
         ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
@@ -45,21 +45,16 @@ const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         
-        // Calculate position (center of image)
         const x = canvas.width / 2;
         const y = canvas.height / 2;
-        
-        // Apply text shadow/stroke for better visibility
         ctx.strokeText(watermarkText, x, y);
         ctx.fillText(watermarkText, x, y);
         
-        // Convert canvas to blob and create object URL
         canvas.toBlob((blob) => {
           const watermarkedUrl = URL.createObjectURL(blob);
           resolve(watermarkedUrl);
         }, 'image/jpeg', 0.9);
       };
-      
       img.src = imageUrl;
     });
   };
@@ -112,18 +107,16 @@ const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
     for (const file of files) {
       const originalPreview = URL.createObjectURL(file);
       
-      // Apply watermark to the image
       try {
         const watermarkedPreview = await applyWatermark(originalPreview);
         newPhotos.push({
           file,
           preview: watermarkedPreview,
-          originalPreview: originalPreview, // Keep original for reference
+          originalPreview: originalPreview,
           isNew: true,
         });
       } catch (error) {
         console.error("Error applying watermark:", error);
-        // Fallback: use original image if watermark fails
         newPhotos.push({
           file,
           preview: originalPreview,
@@ -144,7 +137,6 @@ const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
       videos: { file, preview: URL.createObjectURL(file), isNew: true },
     }));
   };
-
 
   const removePhoto = (idx) => {
     setFormData((prev) => ({
@@ -183,7 +175,6 @@ const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
     for (const photoObj of photoObjects) {
       if (photoObj.isNew && photoObj.file) {
         try {
-          // Create a new canvas to apply watermark
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
           const img = new Image();
@@ -194,14 +185,10 @@ const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
             img.src = photoObj.originalPreview || photoObj.preview;
           });
           
-          // Set canvas dimensions
           canvas.width = img.width;
           canvas.height = img.height;
-          
-          // Draw original image
           ctx.drawImage(img, 0, 0);
           
-          // Apply watermark
           const watermarkText = "vmrdaplots.com";
           ctx.font = `bold ${Math.max(canvas.width * 0.04, 24)}px Arial`;
           ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
@@ -212,16 +199,13 @@ const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
           
           const x = canvas.width / 2;
           const y = canvas.height / 2;
-          
           ctx.strokeText(watermarkText, x, y);
           ctx.fillText(watermarkText, x, y);
           
-          // Convert to blob
           const blob = await new Promise(resolve => 
             canvas.toBlob(resolve, 'image/jpeg', 0.9)
           );
           
-          // Create file from blob
           const watermarkedFile = new File([blob], photoObj.file.name, {
             type: 'image/jpeg',
             lastModified: Date.now()
@@ -230,7 +214,6 @@ const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
           processedFiles.push(watermarkedFile);
         } catch (error) {
           console.error("Error processing image:", error);
-          // Fallback to original file
           processedFiles.push(photoObj.file);
         }
       }
@@ -243,19 +226,17 @@ const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setUploading(true);
-    setProgress({ photos: 0, videos: 0});
+    setProgress({ photos: 0, videos: 0 });
 
     const adminToken = localStorage.getItem("token");
     let uploadedPhotoUrls = [];
     let uploadedVideoUrl = formData.videos?.url || null;
 
     try {
-      // --- Upload photos ---
+      // Upload photos
       const newPhotos = formData.photos.filter((p) => p.isNew && p.file);
       if (newPhotos.length > 0) {
-        // Process images with watermark
         const processedFiles = await processImagesForUpload(newPhotos);
-        
         const form = new FormData();
         processedFiles.forEach((file) => form.append("images", file));
         
@@ -265,7 +246,7 @@ const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
       const existingPhotos = formData.photos.filter((p) => !p.isNew).map((p) => p.url);
       const finalPhotoUrls = [...existingPhotos, ...uploadedPhotoUrls];
 
-      // --- Upload videos ---
+      // Upload video
       if (formData.videos?.isNew) {
         const form = new FormData();
         form.append("video", formData.videos.file);
@@ -291,7 +272,6 @@ const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
 
   return (
     <>
-      {/* Hidden canvas for watermark operations */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
       
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -340,7 +320,6 @@ const PhotosVideos = ({ data = {}, updateData, onNext,isProject }) => {
                 >
                   <X className="w-3 h-3" />
                 </button>
-                {/* Watermark indicator */}
                 <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
                   vmrdaplots.com
                 </div>

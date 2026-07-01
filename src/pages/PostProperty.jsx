@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -7,25 +9,40 @@ import LocationDetails from '../components/property-steps/LocationDetails';
 import PropertyProfile from '../components/property-steps/PropertyProfile';
 import PhotosVideos from '../components/property-steps/PhotosVideos';
 import PricingOthers from '../components/property-steps/PricingOthers';
+import ApiService from '../hooks/ApiService';
 
-const PostProperty = () => {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [visitedSteps, setVisitedSteps] = useState([1]); // Track visited steps
+export default function PostProperty() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isProject = location.state?.isProject ?? false;
-  // ✅ Detect edit mode and get listing data
-  const listing = location.state?.listing || null;
-  const isEditMode = Boolean(listing);
-  // ✅ Updated structure to match backend model
+  const [currentStep, setCurrentStep] = useState(1);
+  const [loading, setLoading] = useState(true);
+  // Get listing data from URL query params (for edit mode)
+  const searchParams = new URLSearchParams(location.search);
+  const listingParam = searchParams.get('edit');
+
+  const isEditMode = Boolean(listingParam);
+
+  // State to track visited steps
+  const [visitedSteps, setVisitedSteps] = useState([1]);
+
+  const steps = [
+    { number: 1, title: 'Basic Details', subtitle: 'Step 1' },
+    { number: 2, title: 'Location Details', subtitle: 'Step 2' },
+    { number: 3, title: 'Property Profile', subtitle: 'Step 3' },
+    { number: 4, title: 'Photos, Videos & Voice-over', subtitle: 'Step 4' },
+    { number: 5, title: 'Amenities', subtitle: 'Step 5' },
+  ];
+
   const [propertyData, setPropertyData] = useState({
     categoryId: '',
+    categoryName: '',
     propertyName: '',
     title: '',
     description: '',
-    marketType: 'sale', // sale, rent, lease
-    propertyKind: 'residential', // residential or commercial
+    propertySubtype: '',
+    marketType: 'sale',
+    propertyKind: 'residential',
     catType: 'Residential',
     price: '',
     photos: [],
@@ -36,7 +53,8 @@ const PostProperty = () => {
     youtubeUrl: '',
     approvedBy: '',
     amenities: [],
-    // ✅ Address nested object
+    privateNotes: '',
+    projectName: '',
     address: {
       city: '',
       locality: '',
@@ -47,7 +65,6 @@ const PostProperty = () => {
       lat: '',
       lon: '',
     },
-    // ✅ Property profile nested object
     propertyProfile: {
       type: "",
       bedrooms: 0,
@@ -63,7 +80,8 @@ const PostProperty = () => {
       plotAvailable: 0,
       facing: "East",
       carpetArea: 0,
-      isParkingAvailable: false,
+      closedParking: 0,
+      openParking: 0,
       parkingType: "",
       status: "",
       areaUnit: "sqft",
@@ -90,53 +108,143 @@ const PostProperty = () => {
       securityAvailable: false
     },
   });
-  
-  // ✅ If editing, prefill property data
-  useEffect(() => {
-    if (isEditMode && listing) {
-      setPropertyData((prev) => ({
-        ...prev,
-        ...listing,
-        address: {
-          ...prev.address,
-          ...listing.address,
-        },
-        propertyProfile: {
-          ...prev.propertyProfile,
-          ...listing.profile,
-        },
-      }));
+
+  const fetchPropertyById = async () => {
+    try {
+      setLoading(true);
+      const response = await ApiService.get(`/properties/${listingParam}`);
+      console.log("Property Response:::", response.property)
+      if (response?.property) {
+        const property = response.property;
+
+        setPropertyData((prev) => ({
+          ...prev,
+          categoryId: property.categoryId || "",
+          id: listingParam,
+          categoryName: property.category?.name || "",
+          propertySubtype: property.category?.name || "",
+          catType: property.category?.catType || "",
+          propertyKind: property.category?.catType || "",
+          propertyName: property.propertyName || "",
+          projectName: property.propertyName || "",
+          title: property.title || "",
+          description: property.description || "",
+          marketType: property.marketType || "sale",
+          price: property.price || "",
+          approvedBy: property.approvedBy || "",
+          availableStatus: property.availableStatus || "Ready to Move",
+          ageOfProperty: property.ageOfProperty || "",
+          youtubeUrl: property.youtubeUrl || "",
+          amenities: property.amenities || [],
+          photos: property.photos || [],
+          videos: property.videos || "",
+          audio: property.audio || "",
+          address: {
+            ...prev.address,
+            city: property.address?.city || "",
+            locality: property.address?.locality || "",
+            subLocality: property.address?.subLocality || "",
+            apartmentDoorNo: property.address?.apartmentDoorNo || "",
+            near_by: property.address?.near_by || [],
+            road_facing: property.address?.road_facing || "",
+            lat: property.address?.lat || "",
+            lon: property.address?.lon || "",
+          },
+          propertyProfile: {
+            ...prev.propertyProfile,
+            ...property.profile,
+            type: property.profile?.type || "",
+            bedrooms: property.profile?.bedrooms || 0,
+            units: property.profile?.units || 0,
+            landArea: Number(property.profile?.landArea) || 0,
+            plotArea: Number(property.profile?.plotArea) || 0,
+            bathrooms: property.profile?.bathrooms || 0,
+            length: Number(property.profile?.length) || 0,
+            breath: Number(property.profile?.breath) || 0,
+            balconies: property.profile?.balconies || 0,
+            roadFacing: Number(property.profile?.roadFacing) || 0,
+            plotAvailable: property.profile?.plotAvailable || 0,
+            facing: property.profile?.facing || "East",
+            carpetArea: Number(property.profile?.carpetArea) || 0,
+            closedParking: property.profile?.closedParking || 0,
+            openParking: property.profile?.openParking || 0,
+            parkingType: property.profile?.parkingType || "",
+            areaUnit: property.profile?.areaUnit || "sqft",
+            buildArea: Number(property.profile?.buildArea) || 0,
+            superBuildArea: Number(property.profile?.superBuildArea) || 0,
+            shopNumber: property.profile?.shopNumber || "",
+            frontage: property.profile?.frontage || "",
+            roadWidth: property.profile?.roadWidth || "",
+            pantryAvailable: property.profile?.pantryAvailable || false,
+            washroomAvailable: property.profile?.washroomAvailable || false,
+            cornerShop: property.profile?.cornerShop || false,
+            powerBackup: property.profile?.powerBackup || false,
+            waterSupply: property.profile?.waterSupply || "24x7",
+            officeNumber: property.profile?.officeNumber || "",
+            floorNumber: property.profile?.floorNumber || "",
+            totalFloors: property.profile?.totalFloors || "",
+            workstations: property.profile?.workstations || 0,
+            cabins: property.profile?.cabins || 0,
+            conferenceRooms: property.profile?.conferenceRooms || 0,
+            furnishedStatus: property.profile?.furnishedStatus || "furnished",
+            acAvailable: property.profile?.acAvailable || false,
+            liftAvailable: property.profile?.liftAvailable || false,
+            parkingSpaces: property.profile?.parkingSpaces || 0,
+            securityAvailable: property.profile?.securityAvailable || false,
+          },
+        }));
+
+        setVisitedSteps([1, 2, 3, 4, 5]);
+
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      } else {
+        console.error("Property not found:", listingParam);
+        navigate("/properties-list");
+      }
+    } catch (error) {
+      console.error("Error fetching property:", error);
+      navigate("/properties-list");
+    } finally {
+      setLoading(false);
     }
-  }, [isEditMode, listing]);
+  };
 
-  const steps = [
-    { number: 1, title: 'Basic Details', subtitle: 'Step 1' },
-    { number: 2, title: 'Location Details', subtitle: 'Step 2' },
-    { number: 3, title: 'Property Profile', subtitle: 'Step 3' },
-    { number: 4, title: 'Photos, Videos & Voice-over', subtitle: 'Step 4' },
-    { number: 5, title: 'Amenities', subtitle: 'Step 5' },
-  ];
-
-  // ✅ Track visited steps
   useEffect(() => {
-    if (!visitedSteps.includes(currentStep)) {
-      setVisitedSteps(prev => [...prev, currentStep]);
+    if (isEditMode) {
+      fetchPropertyById();
     }
-  }, [currentStep]);
+  }, [isEditMode]);
 
-  // ✅ Handle step click navigation
+  useEffect(() => {
+    if (!isEditMode && !visitedSteps.includes(currentStep)) {
+      setVisitedSteps([...visitedSteps, currentStep]);
+    }
+  }, [currentStep, isEditMode]);
+
   const handleStepClick = (stepNumber) => {
-    // Allow navigation to any visited step OR to the next step from current
-    if (visitedSteps.includes(stepNumber) || stepNumber <= currentStep + 1) {
+    let isStepClickable = false;
+
+    if (isEditMode) {
+      isStepClickable = true;
+    } else {
+      isStepClickable = (
+        stepNumber <= currentStep ||
+        visitedSteps.includes(stepNumber) ||
+        stepNumber === currentStep + 1
+      );
+    }
+
+    if (isStepClickable) {
       setCurrentStep(stepNumber);
-      // Also add this step to visitedSteps if not already there
-      if (!visitedSteps.includes(stepNumber)) {
-        setVisitedSteps(prev => [...prev, stepNumber]);
+      if (!isEditMode && !visitedSteps.includes(stepNumber)) {
+        setVisitedSteps([...visitedSteps, stepNumber]);
       }
     }
   };
 
-  // ✅ Merge partial updates from child components
   const updatePropertyData = (data) => {
     setPropertyData((prev) => ({
       ...prev,
@@ -156,9 +264,8 @@ const PostProperty = () => {
     if (currentStep < steps.length) {
       const nextStep = currentStep + 1;
       setCurrentStep(nextStep);
-      // Add next step to visited steps
-      if (!visitedSteps.includes(nextStep)) {
-        setVisitedSteps(prev => [...prev, nextStep]);
+      if (!isEditMode && !visitedSteps.includes(nextStep)) {
+        setVisitedSteps([...visitedSteps, nextStep]);
       }
     }
   };
@@ -171,7 +278,6 @@ const PostProperty = () => {
     }
   };
 
-  // ✅ Property completeness score
   const calculateScore = () => {
     const p = propertyData;
     let score = 0;
@@ -179,26 +285,40 @@ const PostProperty = () => {
     if (p.title) score += 10;
     if (p.description) score += 20;
     if (p.marketType) score += 10;
-    // if (p.propertyKind) score += 10;
     if (p.price) score += 30;
     if (p.address.city) score += 10;
     if (p.address.locality) score += 10;
-    // if (p.propertyProfile.type) score += 10;
-    // if (p.photos) score += 10;
     return Math.min(score, 100);
   };
+
+  useEffect(() => {
+    if (!isEditMode && propertyData.description && propertyData.description.trim().length >= 10) {
+      if (!visitedSteps.includes(5)) {
+        setVisitedSteps(prev => [...prev, 5]);
+      }
+    }
+  }, [propertyData.description, isEditMode, visitedSteps]);
+
+  if (loading && isEditMode) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto py-8 px-4">
         <div className="grid lg:grid-cols-[300px_1fr] gap-8">
           {/* Left Sidebar */}
           <div className="bg-white rounded-xl shadow-sm p-6 h-fit">
-            {/* Pass visitedSteps to StepIndicator */}
-            <StepIndicator 
-              steps={steps} 
-              currentStep={currentStep} 
+            <StepIndicator
+              steps={steps}
+              currentStep={currentStep}
               onStepClick={handleStepClick}
               visitedSteps={visitedSteps}
+              isEditMode={isEditMode}
             />
 
             {/* Property Score */}
@@ -243,23 +363,46 @@ const PostProperty = () => {
             </button>
 
             {currentStep === 1 && (
-              <BasicDetails data={propertyData} updateData={updatePropertyData} onNext={handleNext} isEditMode={isEditMode} isProject={isProject} />
+              <BasicDetails
+                data={propertyData}
+                updateData={updatePropertyData}
+                onNext={handleNext}
+                isEditMode={isEditMode}
+              />
             )}
             {currentStep === 2 && (
-              <LocationDetails data={propertyData} updateData={updatePropertyData} onNext={handleNext} isEditMode={isEditMode} isProject={isProject} />
+              <LocationDetails
+                data={propertyData}
+                updateData={updatePropertyData}
+                onNext={handleNext}
+                isEditMode={isEditMode}
+              />
             )}
             {currentStep === 3 && (
-              <PropertyProfile data={propertyData} updateData={updatePropertyData} onNext={handleNext} isEditMode={isEditMode} isProject={isProject} />
+              <PropertyProfile
+                data={propertyData}
+                updateData={updatePropertyData}
+                onNext={handleNext}
+              />
             )}
             {currentStep === 4 && (
-              <PhotosVideos data={propertyData} updateData={updatePropertyData} onNext={handleNext} isEditMode={isEditMode} isProject={isProject}/>
+              <PhotosVideos
+                data={propertyData}
+                updateData={updatePropertyData}
+                onNext={handleNext}
+                isEditMode={isEditMode}
+              />
             )}
-            {currentStep === 5 &&
-              <PricingOthers data={propertyData} updateData={updatePropertyData} isEditMode={isEditMode} isProject={isProject}/>}
+            {currentStep === 5 && (
+              <PricingOthers
+                data={propertyData}
+                updateData={updatePropertyData}
+                isEditMode={isEditMode}
+              />
+            )}
           </div>
         </div>
       </div>
     </div>
   );
-};
-export default PostProperty;
+}

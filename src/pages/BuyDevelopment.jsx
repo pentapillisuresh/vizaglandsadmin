@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Search, Eye, X } from "lucide-react";
+import { Search, Eye, X, Loader2 } from "lucide-react";
 import ApiService from "../hooks/ApiService";
-import getPhotoSrc from "../hooks/getPhotos";
 
 const BuyDevelopment = () => {
-  const [activeTab, setActiveTab] = useState("investorInquiry"); // default to "buy"
+  const [activeTab, setActiveTab] = useState("investorInquiry");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItem, setSelectedItem] = useState(null);
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // Fetch leads from API
+  // Fetch leads
   useEffect(() => {
     const fetchLeads = async () => {
       try {
+        setLoading(true);
+        setError("");
         const adminToken = localStorage.getItem("token");
         const response = await ApiService.get("/leads", {
           headers: {
@@ -22,13 +24,18 @@ const BuyDevelopment = () => {
           },
         });
 
-        // ✅ Filter out callback leads
-        const validLeads = (response.leads || []).filter(
-          (lead) => lead.leadType !== "callback"
+        // Extract leads array from response
+        const allLeads = response?.leads || [];
+        // Filter only investorInquiry and developmentInquiry
+        const filtered = allLeads.filter(
+          (lead) =>
+            lead.leadType === "investorInquiry" ||
+            lead.leadType === "developmentInquiry"
         );
-        setLeads(validLeads);
-      } catch (error) {
-        console.error("Error fetching leads:", error);
+        setLeads(filtered);
+      } catch (err) {
+        console.error("Error fetching leads:", err);
+        setError(err.response?.data?.message || "Failed to load leads.");
       } finally {
         setLoading(false);
       }
@@ -37,28 +44,69 @@ const BuyDevelopment = () => {
     fetchLeads();
   }, []);
 
-  // Switch between tabs
-  const tabData = (type) => {
-    switch (type) {
-      case "buy":
-        setActiveTab("investorInquiry");
-        break;
-      case "development":
-        setActiveTab("developmentInquiry");
-        break;
-      default:
-        break;
+  // Switch tabs
+  const handleTabChange = (type) => {
+    setActiveTab(type);
+    setSearchTerm(""); // reset search on tab change (optional)
+  };
+
+  // Filter by tab and search
+  const filteredLeads = leads
+    .filter((lead) => lead.leadType === activeTab)
+    .filter((lead) => {
+      const term = searchTerm.toLowerCase();
+      return (
+        lead.name?.toLowerCase().includes(term) ||
+        lead.email?.toLowerCase().includes(term) ||
+        lead.city?.toLowerCase().includes(term) ||
+        lead.phoneNumber?.includes(term)
+      );
+    });
+
+  // Helper to get status badge color
+  const getStatusColor = (status) => {
+    const map = {
+      "site visit": "bg-blue-100 text-blue-700",
+      closing: "bg-green-100 text-green-700",
+      notinterest: "bg-gray-100 text-gray-700",
+      noResponse: "bg-yellow-100 text-yellow-700",
+      pending: "bg-orange-100 text-orange-700",
+    };
+    return map[status] || "bg-gray-100 text-gray-700";
+  };
+
+  // Format date
+  const formatDate = (dateString) => {
+    if (!dateString) return "—";
+    try {
+      return new Date(dateString).toLocaleString();
+    } catch {
+      return "—";
     }
   };
 
-  // Filter leads by tab type and search
-  const filteredLeads = leads
-    .filter((lead) => lead.leadType === activeTab)
-    .filter(
-      (lead) =>
-        lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lead.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  // Loading / error states
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
     );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-10 text-red-600">
+        <p>{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 p-6">
@@ -68,26 +116,27 @@ const BuyDevelopment = () => {
           Leads Management
         </h1>
         <p className="text-gray-500">
-          Manage all investor and development leads efficiently
+          Manage investor and development leads
         </p>
       </div>
 
       {/* Tabs + Search */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
         <div className="flex space-x-3">
-          {/* Tabs (no callback tab now) */}
-          {["buy", "development"].map((type) => (
+          {[
+            { key: "investorInquiry", label: "Investor" },
+            { key: "developmentInquiry", label: "Development" },
+          ].map(({ key, label }) => (
             <button
-              key={type}
-              onClick={() => tabData(type)}
+              key={key}
+              onClick={() => handleTabChange(key)}
               className={`px-5 py-2 rounded-lg font-medium border capitalize ${
-                (activeTab === "investorInquiry" && type === "buy") ||
-                (activeTab === "developmentInquiry" && type === "development")
+                activeTab === key
                   ? "bg-blue-600 text-white border-blue-600"
                   : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
               }`}
             >
-              {type}
+              {label}
             </button>
           ))}
         </div>
@@ -97,7 +146,7 @@ const BuyDevelopment = () => {
           <Search className="absolute left-3 top-2.5 text-gray-400 w-5 h-5" />
           <input
             type="text"
-            placeholder="Search by name or email..."
+            placeholder="Search by name, email, city..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -107,9 +156,7 @@ const BuyDevelopment = () => {
 
       {/* Table */}
       <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
-        {loading ? (
-          <div className="p-6 text-center text-gray-500">Loading leads...</div>
-        ) : filteredLeads.length === 0 ? (
+        {filteredLeads.length === 0 ? (
           <div className="p-6 text-center text-gray-500">
             No leads found for this tab.
           </div>
@@ -120,7 +167,7 @@ const BuyDevelopment = () => {
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Phone</th>
-                <th className="px-4 py-3">Property</th>
+                <th className="px-4 py-3">Property Type</th>
                 <th className="px-4 py-3 hidden md:table-cell">City</th>
                 <th className="px-4 py-3 hidden md:table-cell">Location</th>
                 <th className="px-4 py-3 hidden md:table-cell">Status</th>
@@ -135,28 +182,24 @@ const BuyDevelopment = () => {
                   onClick={() => setSelectedItem(lead)}
                 >
                   <td className="px-4 py-3 font-medium text-gray-800">
-                    {lead.name || "N/A"}
+                    {lead.name || "—"}
                   </td>
-                  <td className="px-4 py-3">{lead.email || "N/A"}</td>
-                  <td className="px-4 py-3">{lead.phoneNumber || "N/A"}</td>
-                  <td className="px-4 py-3">
-                    {lead.property?.propertyName || "N/A"}
+                  <td className="px-4 py-3">{lead.email || "—"}</td>
+                  <td className="px-4 py-3">{lead.phoneNumber || "—"}</td>
+                  <td className="px-4 py-3">{lead.propertyType || "—"}</td>
+                  <td className="px-4 py-3 hidden md:table-cell">
+                    {lead.city || "—"}
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell">
-                    {lead.city || lead.property?.address?.city || "N/A"}
-                  </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
-                    {lead.location || lead.property?.address?.locality || "N/A"}
+                    {lead.location || "—"}
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell">
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        lead.status === "new"
-                          ? "text-yellow-600 bg-yellow-100"
-                          : "text-green-600 bg-green-100"
-                      }`}
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                        lead.status
+                      )}`}
                     >
-                      {lead.status}
+                      {lead.status || "pending"}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -181,46 +224,63 @@ const BuyDevelopment = () => {
             </div>
 
             <div className="p-5 space-y-3">
-              <p><span className="font-semibold">Name:</span> {selectedItem.name}</p>
-              <p><span className="font-semibold">Email:</span> {selectedItem.email}</p>
-              <p><span className="font-semibold">Phone:</span> {selectedItem.phoneNumber}</p>
-              <p><span className="font-semibold">Message:</span> {selectedItem.message || "—"}</p>
-
-              {selectedItem.property && (
-                <>
-                  <p><span className="font-semibold">Property:</span> {selectedItem.property.propertyName}</p>
-                  <p><span className="font-semibold">Category:</span> {selectedItem.property.category?.name}</p>
-                  <p><span className="font-semibold">Price:</span> ₹{selectedItem.property.price}</p>
-                  <p><span className="font-semibold">City:</span> {selectedItem.property.address?.city}</p>
-                  <p><span className="font-semibold">Locality:</span> {selectedItem.property.address?.locality}</p>
-                  {selectedItem.property.photos && (
-                    <div>
-                      <span className="font-semibold">Images:</span>
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        {selectedItem.property.photos.map((img, i) => (
-                          <img key={i} src={img} alt="Property" className="rounded border" />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
+              <p>
+                <span className="font-semibold">Name:</span>{" "}
+                {selectedItem.name || "—"}
+              </p>
+              <p>
+                <span className="font-semibold">Email:</span>{" "}
+                {selectedItem.email || "—"}
+              </p>
+              <p>
+                <span className="font-semibold">Phone:</span>{" "}
+                {selectedItem.phoneNumber || "—"}
+              </p>
+              <p>
+                <span className="font-semibold">Property Type:</span>{" "}
+                {selectedItem.propertyType || "—"}
+              </p>
+              <p>
+                <span className="font-semibold">City:</span>{" "}
+                {selectedItem.city || "—"}
+              </p>
+              <p>
+                <span className="font-semibold">Location:</span>{" "}
+                {selectedItem.location || "—"}
+              </p>
+              {selectedItem.investmentAmount && (
+                <p>
+                  <span className="font-semibold">Investment Amount:</span> ₹
+                  {selectedItem.investmentAmount.toLocaleString()}
+                </p>
               )}
-
+              <p>
+                <span className="font-semibold">Message:</span>{" "}
+                {selectedItem.message || "—"}
+              </p>
+              <p>
+                <span className="font-semibold">Lead Type:</span>{" "}
+                {selectedItem.leadType || "—"}
+              </p>
               <p>
                 <span className="font-semibold">Status:</span>{" "}
                 <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    selectedItem.status === "new"
-                      ? "text-yellow-600 bg-yellow-100"
-                      : "text-green-600 bg-green-100"
-                  }`}
+                  className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                    selectedItem.status
+                  )}`}
                 >
-                  {selectedItem.status}
+                  {selectedItem.status || "pending"}
                 </span>
               </p>
+              {selectedItem.remark && (
+                <p>
+                  <span className="font-semibold">Remark:</span>{" "}
+                  {selectedItem.remark}
+                </p>
+              )}
               <p>
                 <span className="font-semibold">Created:</span>{" "}
-                {new Date(selectedItem.createdAt).toLocaleString()}
+                {formatDate(selectedItem.createdAt)}
               </p>
             </div>
           </div>

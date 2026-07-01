@@ -1,42 +1,89 @@
-import { useState } from "react";
-import { useData } from "../context/DataContext";
-// import LeadForm from "../components/LeadForm";
-import {
-  User,
-  Home,
-  Edit,
-  Trash2,
-  Filter,
-  ChevronDown,
-  Circle,
-  CheckCircle2,
-  AlertTriangle,
-  Star,
-} from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Edit, Trash2, Plus } from "lucide-react";
+import ApiService from "../hooks/ApiService";
+// import LeadForm from "../components/LeadForm"; // uncomment when ready
 
 export default function Leads() {
-  const { leads, properties, users, agents, updateLead, deleteLead } = useData();
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
-  const [filter, setFilter] = useState("all");
 
-  const filteredLeads = leads.filter(
-    (lead) => filter === "all" || lead.status === filter
-  );
+  // ---------- Fetch leads (only 'callback' & 'other') ----------
+  const fetchLeads = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const token = localStorage.getItem("token");
+      // Adjust the endpoint as needed – e.g., "/leads"
+      const res = await ApiService.get("/leads", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-  const getPropertyTitle = (propertyId) => {
-    const property = properties.find((p) => p.id === propertyId);
-    return property ? property.title : "Unknown Property";
+      // Normalise response (your sample returns { leads: [...] })
+      let allLeads = [];
+      if (res?.leads && Array.isArray(res.leads)) allLeads = res.leads;
+      else if (Array.isArray(res)) allLeads = res;
+      else console.error("Unexpected response:", res);
+
+      // Filter only 'callback' and 'other'
+      const filtered = allLeads.filter(
+        (lead) => lead.leadType === "callback" || lead.leadType === "other"
+      );
+      setLeads(filtered);
+    } catch (err) {
+      console.error("Error fetching leads:", err);
+      setError(err.response?.data?.message || "Failed to load leads.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLeads();
+  }, [fetchLeads]);
+
+  // ---------- API helpers ----------
+  const updateLead = async (id, payload) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await ApiService.put(`/leads/${id}`, payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+      if (res) {
+        await fetchLeads();
+        return true;
+      }
+    } catch (err) {
+      console.error("Update error:", err);
+      alert(err.response?.data?.message || "Failed to update lead.");
+    }
+    return false;
   };
 
-  const getUserName = (userId) => {
-    const user = users.find((u) => u.id === userId);
-    return user ? user.fullName : "Unknown User";
+  const deleteLead = async (id) => {
+    if (!window.confirm("Delete this lead?")) return;
+    try {
+      const token = localStorage.getItem("token");
+      await ApiService.delete(`/leads/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      await fetchLeads();
+      alert("Lead deleted.");
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert(err.response?.data?.message || "Failed to delete lead.");
+    }
   };
 
-  const getAgentName = (agentId) => {
-    const agent = agents.find((a) => a.id === agentId);
-    return agent ? agent.fullName : "Unassigned";
+  // ---------- Handlers ----------
+  const handleStatusChange = (id, newStatus) => {
+    updateLead(id, { status: newStatus });
   };
 
   const handleEdit = (lead) => {
@@ -44,70 +91,94 @@ export default function Leads() {
     setShowForm(true);
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this lead?")) {
-      deleteLead(id);
-    }
+  const handleAdd = () => {
+    setEditingLead(null);
+    setShowForm(true);
   };
 
-  const handleStatusChange = (id, status) => {
-    updateLead(id, { status });
-  };
+  // ---------- Filtering by status ----------
+  const filteredByStatus =
+    filterStatus === "all"
+      ? leads
+      : leads.filter((lead) => lead.status === filterStatus);
 
-  const handlePriorityChange = (id, priority) => {
-    updateLead(id, { priority });
-  };
+  // ---------- Status options (from your model) ----------
+  const statusOptions = [
+    "site visit",
+    "closing",
+    "notinterest",
+    "noResponse",
+    "pending"
+  ];
 
-  const statusColors = {
-    new: "bg-blue-100 text-blue-700",
-    contacted: "bg-amber-100 text-amber-700",
-    qualified: "bg-purple-100 text-purple-700",
-    converted: "bg-green-100 text-green-700",
-    closed: "bg-gray-100 text-gray-600",
-  };
+  // ---------- UI ----------
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
 
-  const priorityColors = {
-    low: "text-green-600",
-    medium: "text-yellow-600",
-    high: "text-red-600",
-  };
+  if (error) {
+    return (
+      <div className="text-center py-10 text-red-600">
+        <p>{error}</p>
+        <button
+          onClick={fetchLeads}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Lead Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Lead Management
+          </h1>
           <p className="text-sm text-gray-500">
-            Track and manage customer inquiries
+            Showing only "Callback" and "Other" leads
           </p>
         </div>
         <button
-          className="px-5 py-2.5 bg-gradient-to-r from-blue-800 to-blue-500 text-white rounded-lg shadow hover:shadow-md transition-all font-medium text-sm"
-          onClick={() => setShowForm(true)}
+          onClick={handleAdd}
+          className="px-5 py-2.5 bg-gradient-to-r from-blue-800 to-blue-500 text-white rounded-lg shadow hover:shadow-md transition-all font-medium text-sm flex items-center gap-2"
         >
-          + Add Lead
+          <Plus className="w-4 h-4" /> Add Lead
         </button>
       </div>
 
-      {/* Filters */}
+      {/* Status Filter */}
       <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm mb-8">
         <div className="flex flex-wrap gap-2">
-          {['site visit', 'closing','notinterest' ,'noResponse','pending'].map((status) => (
+          <button
+            onClick={() => setFilterStatus("all")}
+            className={`px-4 py-2 text-sm rounded-lg border font-medium transition ${
+              filterStatus === "all"
+                ? "bg-blue-600 text-white border-blue-600"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+            }`}
+          >
+            All ({leads.length})
+          </button>
+          {statusOptions.map((status) => (
             <button
               key={status}
-              onClick={() => setFilter(status)}
+              onClick={() => setFilterStatus(status)}
               className={`px-4 py-2 text-sm rounded-lg border font-medium transition ${
-                filter === status
+                filterStatus === status
                   ? "bg-blue-600 text-white border-blue-600"
                   : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
               }`}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)} (
-              {status === "all"
-                ? leads.length
-                : leads.filter((l) => l.status === status).length}
-              )
+              {leads.filter((l) => l.status === status).length})
             </button>
           ))}
         </div>
@@ -118,47 +189,45 @@ export default function Leads() {
         <table className="min-w-full text-sm text-left border-collapse">
           <thead className="bg-gray-100 text-gray-600 uppercase text-xs font-semibold border-b">
             <tr>
-              <th className="px-5 py-3">Property</th>
-              <th className="px-5 py-3">Customer</th>
+              <th className="px-5 py-3">Name</th>
+              <th className="px-5 py-3">Email</th>
+              <th className="px-5 py-3">Phone</th>
+              <th className="px-5 py-3">Property Type</th>
+              <th className="px-5 py-3">City</th>
+              <th className="px-5 py-3">Location</th>
               <th className="px-5 py-3">Message</th>
-              <th className="px-5 py-3">Assigned To</th>
-              <th className="px-5 py-3">Priority</th>
               <th className="px-5 py-3">Status</th>
               <th className="px-5 py-3">Date</th>
               <th className="px-5 py-3">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredLeads.length > 0 ? (
-              filteredLeads.map((lead) => (
+            {filteredByStatus.length > 0 ? (
+              filteredByStatus.map((lead) => (
                 <tr
                   key={lead.id}
                   className="hover:bg-blue-50 transition-colors border-b"
                 >
                   <td className="px-5 py-3 font-medium text-gray-800">
-                    {getPropertyTitle(lead.propertyId)}
+                    {lead.name || "—"}
                   </td>
                   <td className="px-5 py-3 text-gray-700">
-                    {getUserName(lead.userId)}
+                    {lead.email || "—"}
                   </td>
-                  <td className="px-5 py-3 text-gray-600 max-w-[220px] truncate">
+                  <td className="px-5 py-3 text-gray-700">
+                    {lead.phoneNumber || "—"}
+                  </td>
+                  <td className="px-5 py-3 text-gray-700">
+                    {lead.propertyType || "—"}
+                  </td>
+                  <td className="px-5 py-3 text-gray-700">
+                    {lead.city || "—"}
+                  </td>
+                  <td className="px-5 py-3 text-gray-700">
+                    {lead.location || "—"}
+                  </td>
+                  <td className="px-5 py-3 text-gray-600 max-w-[180px] truncate">
                     {lead.message || "No message"}
-                  </td>
-                  <td className="px-5 py-3 text-gray-600">
-                    {getAgentName(lead.assignedAgentId)}
-                  </td>
-                  <td className="px-5 py-3">
-                    <select
-                      value={lead.priority}
-                      onChange={(e) =>
-                        handlePriorityChange(lead.id, e.target.value)
-                      }
-                      className={`border border-gray-300 rounded-lg px-2 py-1 text-xs font-semibold capitalize ${priorityColors[lead.priority]}`}
-                    >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                    </select>
                   </td>
                   <td className="px-5 py-3">
                     <select
@@ -166,13 +235,13 @@ export default function Leads() {
                       onChange={(e) =>
                         handleStatusChange(lead.id, e.target.value)
                       }
-                      className={`border border-gray-300 rounded-lg px-2 py-1 text-xs font-semibold capitalize ${statusColors[lead.status]}`}
+                      className="border border-gray-300 rounded-lg px-2 py-1 text-xs font-semibold capitalize bg-white"
                     >
-                      <option value="new">New</option>
-                      <option value="contacted">Contacted</option>
-                      <option value="qualified">Qualified</option>
-                      <option value="converted">Converted</option>
-                      <option value="closed">Closed</option>
+                      {statusOptions.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
                     </select>
                   </td>
                   <td className="px-5 py-3 text-gray-500">
@@ -188,7 +257,7 @@ export default function Leads() {
                         <Edit className="w-4 h-4 text-blue-600" />
                       </button>
                       <button
-                        onClick={() => handleDelete(lead.id)}
+                        onClick={() => deleteLead(lead.id)}
                         title="Delete"
                         className="p-2 rounded-md border border-red-200 hover:bg-red-50 transition"
                       >
@@ -200,8 +269,8 @@ export default function Leads() {
               ))
             ) : (
               <tr>
-                <td colSpan="8" className="text-center py-10 text-gray-400">
-                  No leads found
+                <td colSpan="10" className="text-center py-10 text-gray-400">
+                  No leads found for the selected filter.
                 </td>
               </tr>
             )}
@@ -217,6 +286,7 @@ export default function Leads() {
             setShowForm(false);
             setEditingLead(null);
           }}
+          onSuccess={fetchLeads}
         />
       )}
     </div>
