@@ -12,7 +12,6 @@ const PricingOthers_projects = ({ data, updateData, isEditMode }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
-console.log("rrr::",data)
   const navigate = useNavigate();
 
   const approvedOptions = ['VMRDA', 'VUDA', 'DTCP', 'RERA', 'GVMC', 'Bank Loan'];
@@ -128,7 +127,6 @@ console.log("rrr::",data)
       }
     
       if (response && response.success) {
-        console.log('✅ Property saved:', response);
         setSuccess(true);
         updateData(response.data || propertyDataToSave);
         navigate('./properties');

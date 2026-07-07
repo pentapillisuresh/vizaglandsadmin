@@ -109,12 +109,6 @@ export default function PropertiesHandOver() {
           setTimeout(() => setShowNotification(false), 3000);
         }
         fetchProperties()
-        // Optional: reload or refetch data
-        // window.location.reload(); // reloads the current page
-        // OR ideally: refetch data instead of reloading
-        // fetchProperties();
-
-        console.log("Property updated successfully!");
       } else {
         console.error("Error updating property:", response?.message);
         alert("Failed to update property. Please try again.");

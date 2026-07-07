@@ -12,7 +12,6 @@ import getPhotoSrc from "../hooks/getPhotos";
 
 function LeadItem({ lead, onViewDetails, getStatusBadge, getPriorityBadge }) {
 const photo=getPhotoSrc(lead?.property?.photos);
-console.log("rrr::",photo)
     return (
     <div className="p-6 hover:bg-gray-50 transition-colors border-b">
       <div className="flex flex-col lg:flex-row gap-6">

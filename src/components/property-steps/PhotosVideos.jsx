@@ -259,7 +259,6 @@ const PhotosVideos = ({ data = {}, updateData, onNext, isProject }) => {
         videos: uploadedVideoUrl,
       };
 
-      console.log("✅ Final Uploaded Data:", finalData);
       updateData(finalData);
       onNext();
 

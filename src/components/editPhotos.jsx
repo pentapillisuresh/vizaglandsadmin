@@ -85,7 +85,6 @@ function EditPhotosForm({ existingPhotos = [],setPropertyURLs }) {
         photos: finalUrls.map((url) => ({ url, isNew: false })),
       });
 
-      console.log("✅ Final URLs to save:", finalUrls);
       setPropertyURLs(finalUrls);
       // 👉 Here you can send `finalUrls` to your backend (e.g. PUT /update-product)
       // await axios.put("/api/update-photos", { photos: finalUrls });

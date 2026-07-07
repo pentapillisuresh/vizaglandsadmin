@@ -26,17 +26,50 @@ const PricingOthers = ({ data, updateData, isEditMode, isProject }) => {
   const isUpdating = useRef(false);
 
   const approvedOptions = ['VMRDA', 'VUDA', 'DTCP', 'LRS', 'GVMC', 'RERA', 'Bank Loan'];
-  const amenitiesOptions = [
-    'Security',
-    'Maintenance Staff',
-    'Clubhouse',
-    'Park / Garden',
-    'Gym / Rooms',
-    'Swimming Pool',
-    'Wi-Fi',
-    'Lift',
-    'Power Backup'
-  ];
+  const amenitiesOptions = ['Security','Maintenance Staff','Clubhouse','Park / Garden','Gym / Rooms','children play area','gated community','Swimming Pool','24/7 water service','power service','Wi-Fi','borewall','compound wall','Lift','Power Backup'];
+
+  // Filter amenities based on category
+const filteredAmenities = amenitiesOptions.filter((amenity) => {
+  // Hide Lift, Wi-Fi, Power Backup for Plot/Land
+  if (
+    (data.propertySubtype === "Plot") &&
+    ["Lift", "Wi-Fi",'Swimming Pool','Gym / Rooms', "Power Backup"].includes(amenity)
+  ) {
+    return false;
+  }
+  if (
+    (data.propertySubtype === "Land") &&
+    ['Security','Maintenance Staff','Clubhouse','Park / Garden','Gym / Rooms','children play area','gated community','Swimming Pool','24/7 water service','power service','Wi-Fi','Lift','Power Backup'].includes(amenity)
+  ) {
+    return false;
+  }
+
+  // Show borewall & compound wall only for Land
+  if (
+    ["borewall", "compound wall"].includes(amenity) &&
+    data.propertySubtype !== "Land"
+  ) {
+    return false;
+  }
+
+  // Show 24/7 water service & power service only for Flat
+  if (
+    ["24/7 water service", "power service"].includes(amenity) &&
+    data.propertySubtype !== "Flat/Apartment"
+  ) {
+    return false;
+  }
+
+  // Show children's play area & gated community only for Flat and Plot
+  if (
+    ["children play area", "gated community"].includes(amenity) &&
+    !["Flat/Apartment", "Plot"].includes(data.propertySubtype)
+  ) {
+    return false;
+  }
+
+  return true;
+});
 
   // Get clientId from localStorage
   useEffect(() => {
@@ -444,7 +477,7 @@ const PricingOthers = ({ data, updateData, isEditMode, isProject }) => {
             <div>
               <h3 className="font-serif text-xl font-semibold text-blue-900 mb-3">Amenities</h3>
               <div className="grid grid-cols-2 gap-2">
-                {amenitiesOptions.map((amenity) => (
+                {filteredAmenities.map((amenity) => (
                   <label
                     key={amenity}
                     className="flex items-center gap-2 text-gray-700 cursor-pointer hover:bg-gray-50 p-2 rounded-lg"

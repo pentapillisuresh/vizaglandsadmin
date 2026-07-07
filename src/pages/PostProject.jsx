@@ -120,7 +120,6 @@ const PostProject = () => {
   //     const updated = { ...prev, ...data };
   //     return updated;
   //   });
-  //   console.log('Updated propertyData:', { ...propertyData, ...data });
   // };
 
   // ✅ Merge partial updates from child components

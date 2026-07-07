@@ -20,7 +20,8 @@ export default function PostProperty() {
   // Get listing data from URL query params (for edit mode)
   const searchParams = new URLSearchParams(location.search);
   const listingParam = searchParams.get('edit');
-
+  const { listing, mode, isProject = false } = location.state || {};
+  
   const isEditMode = Boolean(listingParam);
 
   // State to track visited steps
@@ -113,7 +114,6 @@ export default function PostProperty() {
     try {
       setLoading(true);
       const response = await ApiService.get(`/properties/${listingParam}`);
-      console.log("Property Response:::", response.property)
       if (response?.property) {
         const property = response.property;
 
@@ -368,6 +368,7 @@ export default function PostProperty() {
                 updateData={updatePropertyData}
                 onNext={handleNext}
                 isEditMode={isEditMode}
+                isProject={isProject}
               />
             )}
             {currentStep === 2 && (
@@ -376,6 +377,7 @@ export default function PostProperty() {
                 updateData={updatePropertyData}
                 onNext={handleNext}
                 isEditMode={isEditMode}
+                isProject={isProject}
               />
             )}
             {currentStep === 3 && (
@@ -383,6 +385,7 @@ export default function PostProperty() {
                 data={propertyData}
                 updateData={updatePropertyData}
                 onNext={handleNext}
+                isProject={isProject}
               />
             )}
             {currentStep === 4 && (
@@ -391,6 +394,7 @@ export default function PostProperty() {
                 updateData={updatePropertyData}
                 onNext={handleNext}
                 isEditMode={isEditMode}
+                isProject={isProject}
               />
             )}
             {currentStep === 5 && (
@@ -398,6 +402,7 @@ export default function PostProperty() {
                 data={propertyData}
                 updateData={updatePropertyData}
                 isEditMode={isEditMode}
+                isProject={isProject}
               />
             )}
           </div>

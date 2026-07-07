@@ -70,7 +70,6 @@ const navigate=useNavigate();
 
       // const response = await A.get('/properties/search', { params });
       setResults(response.data || []);
-      console.log("propertyType ::", propertyType)
       navigate("/properties-list", {
         state: {
           categoryId: propertyType,

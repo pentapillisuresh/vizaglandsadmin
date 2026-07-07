@@ -269,7 +269,6 @@ export default function Dashboard() {
         <div 
           className="cursor-pointer bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl p-6 text-white shadow-lg hover:scale-[1.03] transition-transform"
           onClick={() => {
-            console.log("property::",)
             setShowProperty(true);
             setShowLeads(false);
           }}
@@ -290,7 +289,6 @@ export default function Dashboard() {
         <div 
           className="cursor-pointer bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-6 text-white shadow-lg hover:scale-[1.03] transition-transform"
           onClick={() => {
-            console.log("lead")
             setShowProperty(false)
             setShowLeads(true)
           }}
