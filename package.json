@@ -8,8 +8,10 @@
     "serve": "vite preview"
   },
   "dependencies": {
+    "aos": "^2.3.4",
     "axios": "^1.12.2",
     "lucide-react": "^0.545.0",
+    "pigeon-maps": "^0.22.1",
     "quill": "^2.0.3",
     "quill-better-table": "^1.2.10",
     "react": "^18.0.0",
@@ -19,7 +21,9 @@
     "react-router-dom": "^7.9.3",
     "recharts": "^3.2.1",
     "sweetalert2": "^11.26.25",
-    "tailwindcss": "^3.0.0"
+    "swiper": "^14.0.6",
+    "tailwindcss": "^3.0.0",
+    "watermarkjs": "^2.1.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.0.4",

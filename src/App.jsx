@@ -16,6 +16,7 @@ import BuyDevelopment from "./pages/BuyDevelopment";
 import ContentManager from "./pages/ContentManager";
 import Agents from "./pages/Agents";
 import Builders from "./pages/Builders";
+import PropertyDetail from "./pages/PropertyDetail";
 
 import "./App.css";
 import PostProperty from "./pages/PostProperty";
@@ -58,6 +59,7 @@ function App() {
             <Route path="blog" element={<Blogs />} />
             <Route path="buy-development" element={<BuyDevelopment />} />
             <Route path="content" element={<ContentManager />} />
+            <Route path="/property/:id" element={<PropertyDetail />} />
             <Route path="settings" element={<Settings />} />
             <Route path="/post-property" element={<PostProperty />} />
             <Route path="/post-projects" element={<PostProject />} />

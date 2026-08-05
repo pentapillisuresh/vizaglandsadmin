@@ -155,7 +155,8 @@ export default function Projects() {
 
   // ---------- Filtering ----------
   const filteredProjects = projects?.filter((p) => {
-    if (!p) return false;
+    if (!p || p.status === "inactive") return false;
+
     const matchesSearch =
       p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.address?.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -311,7 +312,7 @@ export default function Projects() {
               const isPendingOrRejected = project.status === "pending" || project.status === "rejected";
               return (
                 <div
-                  key={project.id}
+                  key={project.id}  
                   className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col h-full"
                 >
                   <div className="relative">
@@ -436,6 +437,13 @@ export default function Projects() {
                         className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm flex items-center justify-center gap-1"
                       >
                         <Edit className="w-4 h-4" /> Edit
+                      </button>
+                      <button
+                       onClick={() =>
+                        navigate(`/property/${project.id}`, { state: { property:project } })
+                      }
+                      className="px-3 py-2 bg-white text-blue-600 rounded-lg border border-blue-600 hover:bg-blue-600 hover:text-white transition font-medium text-sm flex items-center justify-center gap-1"                      >
+                        <Edit className="w-4 h-4" /> View
                       </button>
                       <button
                         onClick={() => handleDelete(project.id)}

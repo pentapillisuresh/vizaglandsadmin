@@ -164,7 +164,7 @@ export default function Properties() {
 
   // ---------- Filtering ----------
   const filteredProperties = properties?.filter((p) => {
-    if (!p) return false;
+    if (!p || p.status === "inactive") return false;
     const matchesSearch =
       p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.address?.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -318,7 +318,7 @@ export default function Properties() {
               const isPendingOrRejected = property.status === "pending" || property.status === "rejected";
               return (
                 <div
-                  key={property.id}
+                  key={property.id} 
                   className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col h-full"
                 >
                   <div className="relative">
@@ -464,6 +464,13 @@ export default function Properties() {
                         className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm flex items-center justify-center gap-1"
                       >
                         <Edit className="w-4 h-4" /> Edit
+                      </button>
+                      <button
+                       onClick={() =>
+                        navigate(`/property/${property.id}`, { state: { property } })
+                      }
+                      className="px-3 py-2 bg-white text-blue-600 rounded-lg border border-blue-600 hover:bg-blue-600 hover:text-white transition font-medium text-sm flex items-center justify-center gap-1"                      >
+                        <Edit className="w-4 h-4" /> View
                       </button>
                       <button
                         onClick={() => handleDelete(property.id)}
