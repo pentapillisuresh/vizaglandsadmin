@@ -119,6 +119,7 @@ export default function UserForm({ item, type, onClose }) {
               </label>
               <input
                 type="number"
+                onWheel={(e) => e.currentTarget.blur()}
                 name="propertyLimit"
                 value={formData.propertyLimit}
                 onChange={handleChange}

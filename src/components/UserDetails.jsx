@@ -13,7 +13,7 @@ export default function UserDetails({ user, type, onClose }) {
   });
   const [editingProperty, setEditingProperty] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
-const navigate=useNavigate();
+  const navigate = useNavigate();
   const userProperties = user.properties || [];
 
   useEffect(() => {
@@ -85,6 +85,26 @@ const navigate=useNavigate();
       alert(err.message);
     }
   };
+
+  const deleteUser = async (ID) => {
+    console.log("userID::", ID)
+    const adminToken = localStorage.getItem('token');
+
+    const res = await ApiService.delete(`/clients/${ID}`,
+      {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (res) {
+      window.location.reload();
+    } else {
+      console.log("rrr::", res?.message)
+    }
+  }
 
   const handleApproveProperty = (propertyId) => {
     if (window.confirm("Are you sure you want to approve this property?")) {
@@ -281,6 +301,20 @@ const navigate=useNavigate();
               >
                 <XCircle className="w-4 h-4" /> Reject
               </button>
+              <button
+                onClick={() => {
+                  const confirmed = window.confirm(
+                    "Are you sure you want to delete this user? This action cannot be undone."
+                  );
+
+                  if (confirmed) {
+                    deleteUser(user.id);
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium"
+              >
+                <XCircle className="w-4 h-4" /> Delete
+              </button>
             </div>
           </div>
 
@@ -361,7 +395,7 @@ const navigate=useNavigate();
                       </div>
 
                       <div className="flex gap-2 mt-3 pt-3 border-t">
-                      <button
+                        <button
                           onClick={() => handleEdit(property)}
                           className="flex-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-xs flex items-center justify-center gap-1"
                         >
@@ -377,8 +411,8 @@ const navigate=useNavigate();
                               <CheckCircle className="w-3 h-3" />
                               Approve
                             </button>
-                            </>
-                          )}
+                          </>
+                        )}
                         {(property.status === "verified" || property.status === "pending") && (
                           <>
                             <button
@@ -420,6 +454,7 @@ const navigate=useNavigate();
                   </label>
                   <input
                     type="number"
+                    onWheel={(e) => e.currentTarget.blur()}
                     min="0"
                     value={permissionData.propertyLimit}
                     onChange={(e) =>

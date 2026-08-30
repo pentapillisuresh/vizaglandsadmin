@@ -162,16 +162,29 @@ export default function Projects() {
       p.address?.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.address?.locality?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesFilter =
-      filter === "all" ||
-      (filter === "pending" && p.status === "pending") ||
-      (filter === "rejected" && p.status === "rejected") ||
-      (filter === "verified" && p.status === "verified") ||
-      (filter === "approved" && (p.status === "verified" || p.status === "approved")) ||
-      (filter === "sold" && p.isSold === true) ||
-      (filter === "owner" && p?.client?.role === "owner") ||
-      (filter === "agent" && p?.client?.role === "agent") ||
-      (filter === "builder" && p?.client?.role === "builder");
+    // Combined role/status filter (including 'admin')
+    let matchesFilter = false;
+    if (filter === "all") {
+      matchesFilter = true;
+    } else if (filter === "pending" && p.status === "pending") {
+      matchesFilter = true;
+    } else if (filter === "rejected" && p.status === "rejected") {
+      matchesFilter = true;
+    } else if (filter === "verified" && p.status === "verified") {
+      matchesFilter = true;
+    } else if (filter === "approved" && (p.status === "verified" || p.status === "approved")) {
+      matchesFilter = true;
+    } else if (filter === "sold" && p.isSold === true) {
+      matchesFilter = true;
+    } else if (filter === "owner" && p?.client?.role === "owner") {
+      matchesFilter = true;
+    } else if (filter === "agent" && p?.client?.role === "agent") {
+      matchesFilter = true;
+    } else if (filter === "builder" && p?.client?.role === "builder") {
+      matchesFilter = true;
+    } else if (filter === "admin" && (p.clientId == null)) {   // 👈 NEW: Admin filter
+      matchesFilter = true;
+    }
 
     return matchesSearch && matchesFilter;
   });
@@ -250,17 +263,17 @@ export default function Projects() {
         <div className="mb-4">
           <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Role:</label>
           <div className="flex gap-2 flex-wrap">
-            {["owner", "agent", "builder"].map((role) => (
+            {["owner", "agent", "builder", "admin"].map((role) => (   // 👈 Added "admin"
               <button
                 key={role}
                 onClick={() => setFilter(role)}
-                className={`px-4 py-2 text-sm rounded-lg border transition font-medium ${
+                className={`px-4 py-2 text-sm rounded-lg border transition font-medium capitalize ${
                   filter === role
                     ? "bg-blue-600 text-white border-blue-600"
                     : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                 }`}
               >
-                {role.charAt(0).toUpperCase() + role.slice(1)}
+                {role}
               </button>
             ))}
           </div>
@@ -287,13 +300,13 @@ export default function Projects() {
                 <button
                   key={status}
                   onClick={() => setFilter(status)}
-                  className={`px-4 py-2 text-sm rounded-lg border transition font-medium ${
+                  className={`px-4 py-2 text-sm rounded-lg border transition font-medium capitalize ${
                     filter === status
                       ? "bg-blue-600 text-white border-blue-600"
                       : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                   }`}
                 >
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                  {status}
                 </button>
               ))}
             </div>
@@ -316,13 +329,12 @@ export default function Projects() {
                   className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col h-full"
                 >
                   <div className="relative">
-                    {/* ✅ Reliable image with inline SVG fallback */}
                     <img
                       src={getPhotoSrc(project.photos)}
                       alt={project.title}
                       className="w-full h-48 object-cover"
                       onError={(e) => {
-                        e.target.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='20' fill='%239ca3af' text-anchor='middle' dy='.3em'%3ENo Image%3C/text%3E%3C/svg%3E`;
+                        e.target.src = '/vizaglogo.jpg';
                       }}
                     />
 

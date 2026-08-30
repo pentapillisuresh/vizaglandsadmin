@@ -9,6 +9,9 @@ const PricingOthers = ({ data, updateData, isEditMode, isProject }) => {
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
   const [privateNotes, setPrivateNotes] = useState('');
+  const [metaTitle, setMetaTitle] = useState(`${data.propertyName},${data.title}`);
+  const [metaDescription, setMetaDescription] = useState('');
+  const [metaKeywords, setMetaKeywords] = useState(`${data.categoryName} in ${data.address.city},${data.categoryName} in ${data.address.locality}`);
   const [approvedBy, setApprovedBy] = useState([]);
   const [amenities, setAmenities] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -16,6 +19,12 @@ const PricingOthers = ({ data, updateData, isEditMode, isProject }) => {
   const [success, setSuccess] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
   const [clientId, setClientId] = useState(null);
+
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [windowDimensions, setWindowDimensions] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 0,
+    height: typeof window !== 'undefined' ? window.innerHeight : 0,
+  });
 
   const navigate = useNavigate();
 
@@ -26,50 +35,65 @@ const PricingOthers = ({ data, updateData, isEditMode, isProject }) => {
   const isUpdating = useRef(false);
 
   const approvedOptions = ['VMRDA', 'VUDA', 'DTCP', 'LRS', 'GVMC', 'RERA', 'Bank Loan'];
-  const amenitiesOptions = ['Security','Maintenance Staff','Clubhouse','Park / Garden','Gym / Rooms','children play area','gated community','Swimming Pool','24/7 water service','power service','Wi-Fi','borewall','compound wall','Lift','Power Backup'];
+  const amenitiesOptions = ['Security', 'Maintenance Staff', 'Clubhouse', 'Park / Garden', 'Gym / Rooms', 'children play area', 'gated community', 'Swimming Pool', '24/7 water service', 'power service', 'Wi-Fi', 'borewall', 'compound wall', 'Lift', 'Power Backup'];
 
   // Filter amenities based on category
-const filteredAmenities = amenitiesOptions.filter((amenity) => {
-  // Hide Lift, Wi-Fi, Power Backup for Plot/Land
-  if (
-    (data.propertySubtype === "Plot") &&
-    ["Lift", "Wi-Fi",'Swimming Pool','Gym / Rooms', "Power Backup"].includes(amenity)
-  ) {
-    return false;
-  }
-  if (
-    (data.propertySubtype === "Land") &&
-    ['Security','Maintenance Staff','Clubhouse','Park / Garden','Gym / Rooms','children play area','gated community','Swimming Pool','24/7 water service','power service','Wi-Fi','Lift','Power Backup'].includes(amenity)
-  ) {
-    return false;
-  }
+  const filteredAmenities = amenitiesOptions.filter((amenity) => {
+    // Hide Lift, Wi-Fi, Power Backup for Plot/Land
+    if (
+      (data.propertySubtype === "Plot") &&
+      ["Lift", "Wi-Fi", 'Swimming Pool', 'Gym / Rooms', "Power Backup"].includes(amenity)
+    ) {
+      return false;
+    }
+    if (
+      (data.propertySubtype === "Land") &&
+      ['Security', 'Maintenance Staff', 'Clubhouse', 'Park / Garden', 'Gym / Rooms', 'children play area', 'gated community', 'Swimming Pool', '24/7 water service', 'power service', 'Wi-Fi', 'Lift', 'Power Backup'].includes(amenity)
+    ) {
+      return false;
+    }
 
-  // Show borewall & compound wall only for Land
-  if (
-    ["borewall", "compound wall"].includes(amenity) &&
-    data.propertySubtype !== "Land"
-  ) {
-    return false;
-  }
+    // Show borewall & compound wall only for Land
+    if (
+      ["borewall", "compound wall"].includes(amenity) &&
+      data.propertySubtype !== "Land"
+    ) {
+      return false;
+    }
 
-  // Show 24/7 water service & power service only for Flat
-  if (
-    ["24/7 water service", "power service"].includes(amenity) &&
-    data.propertySubtype !== "Flat/Apartment"
-  ) {
-    return false;
-  }
+    // Show 24/7 water service & power service only for Flat
+    if (
+      ["24/7 water service", "power service"].includes(amenity) &&
+      data.propertySubtype !== "Flat/Apartment"
+    ) {
+      return false;
+    }
 
-  // Show children's play area & gated community only for Flat and Plot
-  if (
-    ["children play area", "gated community"].includes(amenity) &&
-    !["Flat/Apartment", "Plot"].includes(data.propertySubtype)
-  ) {
-    return false;
-  }
+    // Show children's play area & gated community only for Flat and Plot
+    if (
+      ["children play area", "gated community"].includes(amenity) &&
+      !["Flat/Apartment", "Plot"].includes(data.propertySubtype)
+    ) {
+      return false;
+    }
 
-  return true;
-});
+    return true;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleResize = () => {
+      setWindowDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
 
   // Get clientId from localStorage
   useEffect(() => {
@@ -86,6 +110,7 @@ const filteredAmenities = amenitiesOptions.filter((amenity) => {
 
   // Populate state from data - runs on mount and when data changes
   useEffect(() => {
+    // Skip the first mount to avoid unnecessary updates
     if (isInitialMount.current) {
       isInitialMount.current = false;
       // Initialize from data on mount
@@ -93,8 +118,11 @@ const filteredAmenities = amenitiesOptions.filter((amenity) => {
         setProjectName(data.projectName || '');
         setDescription(data.description || '');
         setPrivateNotes(data.privateNotes || '');
+        setMetaTitle(data.metaTitle || `${data.propertyName},${data.title}`);
+        setMetaDescription(data.metaDescription || '');
+        setMetaKeywords(data.metaKeywords || `${data.categoryName} in ${data.address.city},${data.categoryName} in ${data.address.locality}`);
 
-        // Handle approvedBy (can be string or array)
+        // Handle approvedBy
         if (data.approvedBy) {
           if (typeof data.approvedBy === 'string') {
             setApprovedBy(data.approvedBy.split(',').map(item => item.trim()).filter(item => item !== '' && item !== 'null'));
@@ -116,16 +144,20 @@ const filteredAmenities = amenitiesOptions.filter((amenity) => {
       return;
     }
 
-    // Check if data has actually changed from parent
+    // Check if data has actually changed from parent and prevent infinite loops
     const dataChanged = JSON.stringify(data) !== JSON.stringify(previousDataRef.current);
 
     if (dataChanged && !isUpdating.current) {
       previousDataRef.current = data;
 
+      // Update local state from parent data (for edit mode)
       if (data) {
         setProjectName(data.projectName || '');
         setDescription(data.description || '');
         setPrivateNotes(data.privateNotes || '');
+        setMetaTitle(data.metaTitle || '');
+        setMetaDescription(data.metaDescription || '');
+        setMetaKeywords(data.metaKeywords || '');
 
         if (data.approvedBy) {
           if (typeof data.approvedBy === 'string') {
@@ -148,35 +180,48 @@ const filteredAmenities = amenitiesOptions.filter((amenity) => {
 
   // Debounced update to parent (auto-save)
   useEffect(() => {
+    // Skip update during initial mount
     if (isInitialMount.current) return;
 
-    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+    // Clear previous timeout
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+    }
 
+    // Debounce the update to prevent rapid updates
     updateTimeoutRef.current = setTimeout(() => {
+      // Prevent recursive updates
       isUpdating.current = true;
 
       const updatedData = {
         ...data,
         projectName: projectName || null,
         description: description || null,
-        privateNotes: privateNotes || null,
+        privateNote: privateNotes || null,
+        metaTitle: metaTitle || null,
+        metaDescription: metaDescription || null,
+        metaKeywords: metaKeywords || null,
         approvedBy: approvedBy.length ? approvedBy.join(',') : null,
         amenities: amenities.length ? amenities : null,
       };
 
+      // Only update if there are actual changes
       if (JSON.stringify(updatedData) !== JSON.stringify(data)) {
         updateData(updatedData);
       }
 
+      // Reset the updating flag after a short delay
       setTimeout(() => {
         isUpdating.current = false;
       }, 100);
     }, 500);
 
     return () => {
-      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
     };
-  }, [projectName, description, privateNotes, approvedBy, amenities]);
+  }, [projectName, description, privateNotes, metaTitle, metaDescription, metaKeywords, JSON.stringify(approvedBy), JSON.stringify(amenities)]);
 
   const handleApprovedChange = (value) => {
     setApprovedBy(prev =>
@@ -200,9 +245,22 @@ const filteredAmenities = amenitiesOptions.filter((amenity) => {
 
   const handlePrivateNotesChange = (e) => {
     const value = e.target.value;
-    if (value.length <= 100) {
-      setPrivateNotes(value);
-    }
+    setPrivateNotes(value);
+  };
+
+  const handleMetaTitleChange = (e) => {
+    const value = e.target.value;
+    setMetaTitle(value);
+  };
+
+  const handleMetaDescriptionChange = (e) => {
+    const value = e.target.value;
+    setMetaDescription(value);
+  };
+
+  const handleMetaKeywordsChange = (e) => {
+    const value = e.target.value;
+    setMetaKeywords(value);
   };
 
   const validateForm = () => {
@@ -222,13 +280,17 @@ const filteredAmenities = amenitiesOptions.filter((amenity) => {
     if (data.marketType) score += 10;
     if (data.address && (data.address.city || data.city)) score += 10;
     if (data.amenities && data.amenities.length > 0) score += 10;
-    if (data.propertyProfile && Object.keys(data.propertyProfile).length > 0) score += 20;
+    if (data.propertyProfile && Object.keys(data.propertyProfile).length > 0) score += 17;
     if (data.price) score += 10;
-    if (data.propertySubtype) score += 20;
-    if (description && description.trim().length >= 10) score += 10;
+    if (data.propertySubtype) score += 10;
+    if (description && description.trim().length >= 10) score += 5;
     if (approvedBy && approvedBy.length > 0) score += 5;
-    if (privateNotes && privateNotes.trim().length > 0) score += 3;
-    if (projectName && projectName.trim().length > 0) score += 2;
+    if (privateNotes && privateNotes.trim().length > 0) score += 5;
+    if (projectName && projectName.trim().length > 0) score += 3;
+    // SEO fields contribute to score
+    if (metaTitle && metaTitle.trim().length > 0) score += 3;
+    if (metaDescription && metaDescription.trim().length > 0) score += 3;
+    if (metaKeywords && metaKeywords.trim().length > 0) score += 4;
     return Math.min(score, 100);
   };
 
@@ -303,7 +365,10 @@ const filteredAmenities = amenitiesOptions.filter((amenity) => {
         ...data,
         projectName: projectName || null,
         description: description || null,
-        privateNotes: privateNotes || null,
+        privateNote: privateNotes || null,
+        metaTitle: metaTitle || null,
+        metaDescription: metaDescription || null,
+        metaKeywords: metaKeywords || null,
         approvedBy: approvedBy.length ? approvedBy.join(',') : null,
         amenities: amenities.length ? amenities : null,
         clientId: clientId || data.clientId || null,
@@ -360,10 +425,24 @@ const filteredAmenities = amenitiesOptions.filter((amenity) => {
     }
   };
 
-  const isPublishDisabled = loading || !description || description.trim().length < 10;
+  const isPublishDisabled = loading || !description || !privateNotes ||description.trim().length < 10 ;
 
   return (
     <div className="space-y-8 relative min-h-screen">
+
+      {/* Confetti Animation */}
+      {showConfetti && typeof window !== 'undefined' && (
+        <Confetti
+          width={windowDimensions.width}
+          height={windowDimensions.height}
+          numberOfPieces={200}
+          gravity={0.3}
+          colors={['#1e3a8a', '#3b82f6', '#f59e0b', '#dc2626', '#8b5cf6']}
+          recycle={false}
+          style={{ position: 'fixed', top: 0, left: 0, zIndex: 9999 }}
+        />
+      )}
+
       {/* Header */}
       <div className="text-center">
         <h2 className="font-serif text-3xl font-bold text-blue-900 mb-2">
@@ -399,7 +478,7 @@ const filteredAmenities = amenitiesOptions.filter((amenity) => {
               Property Description <span className="text-red-500">*</span>
             </label>
             <span className={`text-xs ${description.length > 0 && description.length < 10 ? 'text-red-500' :
-                description.length >= 10 ? 'text-green-500' : 'text-gray-500'
+              description.length >= 10 ? 'text-green-500' : 'text-gray-500'
               }`}>
               {description.length}/10+ characters
             </span>
@@ -439,7 +518,7 @@ const filteredAmenities = amenitiesOptions.filter((amenity) => {
             placeholder="Enter private notes (visible only to owner) - Optional"
             rows="3"
             className="w-full px-4 text-gray-600 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-roboto resize-none"
-            maxLength={100}
+            maxLength={50}
           />
           <p className="text-xs text-gray-500 mt-1">
             Private notes are only visible to owner. They won't appear on the frontend. This field is optional.
@@ -463,8 +542,8 @@ const filteredAmenities = amenitiesOptions.filter((amenity) => {
                     type="button"
                     onClick={() => handleApprovedChange(opt)}
                     className={`px-4 py-2.5 rounded-full border-2 transition-all ${approvedBy.includes(opt)
-                        ? 'bg-blue-900 border-blue-900 text-white'
-                        : 'bg-white border-gray-300 text-gray-700 hover:border-orange-300'
+                      ? 'bg-blue-900 border-blue-900 text-white'
+                      : 'bg-white border-gray-300 text-gray-700 hover:border-orange-300'
                       }`}
                   >
                     {opt}
@@ -495,6 +574,84 @@ const filteredAmenities = amenitiesOptions.filter((amenity) => {
             </div>
           </div>
         )}
+
+        {/* SEO Fields - Meta Title, Meta Description, Meta Keywords */}
+        <div className="border-t border-gray-200 pt-6 mt-4">
+          <h3 className="font-serif text-xl font-semibold text-blue-900 mb-4">
+            SEO Settings
+          </h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Optimize your property listing for search engines. These fields help improve your property's visibility.
+          </p>
+
+          {/* Meta Title */}
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <label className="block font-roboto text-sm font-medium text-gray-700">
+                Meta Title
+              </label>
+              <span className="text-xs text-gray-500">
+                {metaTitle.length}/70 characters (recommended)
+              </span>
+            </div>
+            <input
+              type="text"
+              value={metaTitle}
+              onChange={handleMetaTitleChange}
+              placeholder="Enter meta title for SEO (e.g., Premium Plot for Sale in Vizag)"
+              maxLength={70}
+              className="w-full px-4 text-gray-600 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-roboto"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              The meta title appears in search engine results. Keep it under 70 characters for best results.
+            </p>
+          </div>
+
+          {/* Meta Description */}
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <label className="block font-roboto text-sm font-medium text-gray-700">
+                Meta Description
+              </label>
+              <span className="text-xs text-gray-500">
+                {metaDescription.length}/160 characters (recommended)
+              </span>
+            </div>
+            <textarea
+              value={metaDescription}
+              onChange={handleMetaDescriptionChange}
+              placeholder="Enter meta description for SEO (e.g., Find the best VMRDA approved plots in Visakhapatnam. Buy premium residential plots near RK Beach with excellent connectivity.)"
+              rows="2"
+              maxLength={160}
+              className="w-full px-4 text-gray-600 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-roboto resize-none"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              The meta description appears below the title in search results. Keep it under 160 characters.
+            </p>
+          </div>
+
+          {/* Meta Keywords */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block font-roboto text-sm font-medium text-gray-700">
+                Meta Keywords
+              </label>
+              <span className="text-xs text-gray-500">
+                {metaKeywords.split(',').filter(k => k.trim()).length} keywords
+              </span>
+            </div>
+            <input
+              type="text"
+              value={metaKeywords}
+              onChange={handleMetaKeywordsChange}
+              placeholder="Enter keywords separated by commas (e.g., plots in Vizag, VMRDA approved plots, buy land in Visakhapatnam)"
+              className="w-full px-4 text-gray-600 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-roboto"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Add relevant keywords separated by commas to help search engines understand your property better.
+            </p>
+          </div>
+        </div>
 
       {/* Property Summary */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-10">

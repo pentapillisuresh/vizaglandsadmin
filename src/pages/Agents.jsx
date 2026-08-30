@@ -3,7 +3,7 @@ import UserDetails from "../components/UserDetails";
 import {
   Search,
   Users as UsersIcon,
-  Eye,
+  Eye,Delete,
   CheckCircle,
   FileText,
 } from "lucide-react";

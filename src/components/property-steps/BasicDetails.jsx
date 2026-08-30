@@ -125,6 +125,7 @@ const BasicDetails = ({ data, updateData, onNext, isEditMode, isProject }) => {
     updateData({
       categoryId: selectedCategory?.id || '',
       title: title.trim(),
+      categoryName:selectedCategory.name,
       marketType: listingType,
       propertyKind: propertyType,
       propertySubtype,

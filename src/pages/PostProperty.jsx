@@ -37,10 +37,10 @@ export default function PostProperty() {
 
   const [propertyData, setPropertyData] = useState({
     categoryId: '',
-    categoryName: '',
+    categoryName:'',
     propertyName: '',
     title: '',
-    description: '',
+    description: '', 
     propertySubtype: '',
     marketType: 'sale',
     propertyKind: 'residential',
@@ -56,6 +56,9 @@ export default function PostProperty() {
     amenities: [],
     privateNotes: '',
     projectName: '',
+    metaTitle:'',
+    metaDescription:'',
+    metaKeywords:'',
     address: {
       city: '',
       locality: '',
@@ -119,14 +122,14 @@ export default function PostProperty() {
 
         setPropertyData((prev) => ({
           ...prev,
+          // Main Property Details
           categoryId: property.categoryId || "",
-          id: listingParam,
-          categoryName: property.category?.name || "",
+          id:listingParam,
+          categoryName: property.category.name || "",
           propertySubtype: property.category?.name || "",
-          catType: property.category?.catType || "",
+          catType: property.category.catType || "",
           propertyKind: property.category?.catType || "",
           propertyName: property.propertyName || "",
-          projectName: property.propertyName || "",
           title: property.title || "",
           description: property.description || "",
           marketType: property.marketType || "sale",
@@ -136,23 +139,37 @@ export default function PostProperty() {
           ageOfProperty: property.ageOfProperty || "",
           youtubeUrl: property.youtubeUrl || "",
           amenities: property.amenities || [],
-          photos: property.photos || [],
+          metaTitle:property.metaTitle,
+          metaDescription:property.metaDescription,
+          metaKeywords:property.metaKeywords,
+          privateNotes:property.privateNote,
+                // Media
+          photos: property.photos
+            ? property.photos
+            : [],
           videos: property.videos || "",
           audio: property.audio || "",
+  
+          // Address
           address: {
             ...prev.address,
             city: property.address?.city || "",
             locality: property.address?.locality || "",
             subLocality: property.address?.subLocality || "",
-            apartmentDoorNo: property.address?.apartmentDoorNo || "",
+            apartmentDoorNo:
+              property.address?.apartmentDoorNo || "",
             near_by: property.address?.near_by || [],
-            road_facing: property.address?.road_facing || "",
+            road_facing:
+              property.address?.road_facing || "",
             lat: property.address?.lat || "",
             lon: property.address?.lon || "",
           },
+  
+          // Property Profile
           propertyProfile: {
             ...prev.propertyProfile,
             ...property.profile,
+  
             type: property.profile?.type || "",
             bedrooms: property.profile?.bedrooms || 0,
             units: property.profile?.units || 0,
@@ -162,35 +179,64 @@ export default function PostProperty() {
             length: Number(property.profile?.length) || 0,
             breath: Number(property.profile?.breath) || 0,
             balconies: property.profile?.balconies || 0,
-            roadFacing: Number(property.profile?.roadFacing) || 0,
-            plotAvailable: property.profile?.plotAvailable || 0,
+            roadFacing:
+              Number(property.profile?.roadFacing) || 0,
+            plotAvailable:
+              property.profile?.plotAvailable || 0,
             facing: property.profile?.facing || "East",
-            carpetArea: Number(property.profile?.carpetArea) || 0,
-            closedParking: property.profile?.closedParking || 0,
-            openParking: property.profile?.openParking || 0,
-            parkingType: property.profile?.parkingType || "",
-            areaUnit: property.profile?.areaUnit || "sqft",
-            buildArea: Number(property.profile?.buildArea) || 0,
-            superBuildArea: Number(property.profile?.superBuildArea) || 0,
-            shopNumber: property.profile?.shopNumber || "",
-            frontage: property.profile?.frontage || "",
-            roadWidth: property.profile?.roadWidth || "",
-            pantryAvailable: property.profile?.pantryAvailable || false,
-            washroomAvailable: property.profile?.washroomAvailable || false,
-            cornerShop: property.profile?.cornerShop || false,
-            powerBackup: property.profile?.powerBackup || false,
-            waterSupply: property.profile?.waterSupply || "24x7",
-            officeNumber: property.profile?.officeNumber || "",
-            floorNumber: property.profile?.floorNumber || "",
-            totalFloors: property.profile?.totalFloors || "",
-            workstations: property.profile?.workstations || 0,
-            cabins: property.profile?.cabins || 0,
-            conferenceRooms: property.profile?.conferenceRooms || 0,
-            furnishedStatus: property.profile?.furnishedStatus || "furnished",
-            acAvailable: property.profile?.acAvailable || false,
-            liftAvailable: property.profile?.liftAvailable || false,
-            parkingSpaces: property.profile?.parkingSpaces || 0,
-            securityAvailable: property.profile?.securityAvailable || false,
+            carpetArea:
+              Number(property.profile?.carpetArea) || 0,
+            closedParking:
+              property.profile?.closedParking || 0,
+            openParking:
+              property.profile?.openParking || 0,
+            parkingType:
+              property.profile?.parkingType || "",
+            areaUnit:
+              property.profile?.areaUnit || "sqft",
+            buildArea:
+              Number(property.profile?.buildArea) || 0,
+            superBuildArea:
+              Number(property.profile?.superBuildArea) || 0,
+            shopNumber:
+              property.profile?.shopNumber || "",
+            frontage:
+              property.profile?.frontage || "",
+            roadWidth:
+              property.profile?.roadWidth || "",
+            pantryAvailable:
+              property.profile?.pantryAvailable || false,
+            washroomAvailable:
+              property.profile?.washroomAvailable || false,
+            cornerShop:
+              property.profile?.cornerShop || false,
+            powerBackup:
+              property.profile?.powerBackup || false,
+            waterSupply:
+              property.profile?.waterSupply || "24x7",
+            officeNumber:
+              property.profile?.officeNumber || "",
+            floorNumber:
+              property.profile?.floorNumber || "",
+            totalFloors:
+              property.profile?.totalFloors || "",
+            workstations:
+              property.profile?.workstations || 0,
+            cabins:
+              property.profile?.cabins || 0,
+            conferenceRooms:
+              property.profile?.conferenceRooms || 0,
+            furnishedStatus:
+              property.profile?.furnishedStatus ||
+              "furnished",
+            acAvailable:
+              property.profile?.acAvailable || false,
+            liftAvailable:
+              property.profile?.liftAvailable || false,
+            parkingSpaces:
+              property.profile?.parkingSpaces || 0,
+            securityAvailable:
+              property.profile?.securityAvailable || false,
           },
         }));
 
@@ -287,7 +333,9 @@ export default function PostProperty() {
     if (p.marketType) score += 10;
     if (p.price) score += 30;
     if (p.address.city) score += 10;
-    if (p.address.locality) score += 10;
+    if (p.metaTitle) score += 3;
+    if (p.metaDescription) score += 3;
+    if (p.metaKeywords) score += 4;
     return Math.min(score, 100);
   };
 

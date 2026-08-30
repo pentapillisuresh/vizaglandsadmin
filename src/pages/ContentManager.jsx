@@ -21,14 +21,14 @@ const ContentManager = () => {
   const [editingLocalityValue, setEditingLocalityValue] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  
+
   // Search states for main page
   const [citySearchTerm, setCitySearchTerm] = useState("");
   const [localitySearchTerm, setLocalitySearchTerm] = useState("");
-  
+
   // Search states for add popup
   const [addLocalitySearchTerm, setAddLocalitySearchTerm] = useState("");
-  
+
   // Search states for edit popup
   const [editLocalitySearchTerm, setEditLocalitySearchTerm] = useState("");
 
@@ -52,11 +52,11 @@ const ContentManager = () => {
     if (!searchTerm || !text) return text;
     const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
     const parts = text.split(regex);
-    return parts.map((part, index) => 
-      regex.test(part) ? 
+    return parts.map((part, index) =>
+      regex.test(part) ?
         <span key={index} className="bg-yellow-300 text-gray-900 font-semibold px-0.5 rounded">
           {part}
-        </span> : 
+        </span> :
         part
     );
   };
@@ -116,14 +116,14 @@ const ContentManager = () => {
 
     try {
       const adminToken = localStorage.getItem('token');
-      
+
       const videoData = {
         name: videoForm.title,
         description: videoForm.description,
         photo: videoForm.youtubeLink || videoForm.photo,
         status: "inactive",
       };
-      
+
       if (editId) {
         // Update existing ad
         await ApiService.put(`/commercialAds/${editId}`, videoData, {
@@ -255,7 +255,7 @@ const ContentManager = () => {
           "Content-Type": "application/json"
         }
       });
-      
+
       // Process each city to sort its localities alphabetically
       const processedLocations = (res || []).map(location => {
         let localities = [];
@@ -266,13 +266,13 @@ const ContentManager = () => {
         }
         // Sort localities alphabetically
         localities.sort((a, b) => a.localeCompare(b));
-        
+
         return {
           ...location,
           locality: localities
         };
       });
-      
+
       setLocations(processedLocations);
     } catch (error) {
       console.error("Error fetching city data:", error);
@@ -312,34 +312,63 @@ const ContentManager = () => {
 
   // 🔹 Add locality to the array (for add modal)
   const addLocality = () => {
-    if (localityInput.trim()) {
-      const updatedLocalities = [...cityForm.locality, localityInput.trim()];
-      // Sort localities alphabetically
-      updatedLocalities.sort((a, b) => a.localeCompare(b));
-      setCityForm({
-        ...cityForm,
-        locality: updatedLocalities
-      });
-      setLocalityInput("");
-      setAddLocalitySearchTerm("");
+    const locality = localityInput.trim();
+  
+    if (!locality) return;
+  
+    // Check if locality already exists
+    const alreadyExists = cityForm.locality.some(
+      item => item.trim().toLowerCase() === locality.toLowerCase()
+    );
+  
+    if (alreadyExists) {
+      alert("This locality is already added.");
+      return;
     }
+  
+    const updatedLocalities = [...cityForm.locality, locality];
+  
+    // Sort localities alphabetically
+    updatedLocalities.sort((a, b) => a.localeCompare(b));
+  
+    setCityForm({
+      ...cityForm,
+      locality: updatedLocalities
+    });
+  
+    setLocalityInput("");
+    setAddLocalitySearchTerm("");
   };
-
+  
   // 🔹 Add locality to edit array
   const addEditLocality = () => {
-    if (editLocalityInput.trim()) {
-      const updatedLocalities = [...cityForm.locality, editLocalityInput.trim()];
-      // Sort localities alphabetically
-      updatedLocalities.sort((a, b) => a.localeCompare(b));
-      setCityForm({
-        ...cityForm,
-        locality: updatedLocalities
-      });
-      setEditLocalityInput("");
-      setEditLocalitySearchTerm("");
+    const locality = editLocalityInput.trim();
+  
+    if (!locality) return;
+  
+    const alreadyExists = cityForm.locality.some(
+      item => item.trim().toLowerCase() === locality.toLowerCase()
+    );
+  
+    if (alreadyExists) {
+      alert("This locality is already added.");
+      return;
     }
+  
+    const updatedLocalities = [...cityForm.locality, locality];
+  
+    // Sort localities alphabetically
+    updatedLocalities.sort((a, b) => a.localeCompare(b));
+  
+    setCityForm({
+      ...cityForm,
+      locality: updatedLocalities
+    });
+  
+    setEditLocalityInput("");
+    setEditLocalitySearchTerm("");
   };
-
+  
   // 🔹 Start editing a locality
   const startEditingLocality = (index) => {
     setEditingLocalityIndex(index);
@@ -390,27 +419,27 @@ const ContentManager = () => {
       setTimeout(() => setErrorMessage(""), 3000);
       return;
     }
-    
+
     if (!cityForm.city.trim()) {
       setErrorMessage("Please enter city name");
       setTimeout(() => setErrorMessage(""), 3000);
       return;
     }
-    
+
     try {
       const adminToken = localStorage.getItem('token');
       const payload = {
         city: cityForm.city.trim(),
         locality: cityForm.locality
       };
-      
+
       await ApiService.post(`/city`, payload, {
         headers: {
           Authorization: `Bearer ${adminToken}`,
           "Content-Type": "application/json"
         }
       });
-      
+
       setSuccessMessage("City added successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
       await fetchCities(); // refresh list
@@ -418,7 +447,7 @@ const ContentManager = () => {
       setActiveModal("");
     } catch (error) {
       console.error("Error saving city:", error);
-      setErrorMessage(error.response?.data?.message || "Failed to save city. Please try again.");
+      setErrorMessage(error?.data?.message || "Failed to save city. Please try again.");
       setTimeout(() => setErrorMessage(""), 3000);
     }
   };
@@ -430,19 +459,19 @@ const ContentManager = () => {
       setTimeout(() => setErrorMessage(""), 3000);
       return;
     }
-    
+
     if (!cityForm.city.trim()) {
       setErrorMessage("Please enter city name");
       setTimeout(() => setErrorMessage(""), 3000);
       return;
     }
-    
+
     const payload = {
       city: cityForm.city.trim(),
       id: editId,
       locality: cityForm.locality
     };
-    
+
     try {
       const adminToken = localStorage.getItem('token');
       await ApiService.put(`/city`, payload, {
@@ -451,7 +480,7 @@ const ContentManager = () => {
           "Content-Type": "application/json"
         }
       });
-      
+
       setSuccessMessage("City updated successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
       setIsActivCityeModal(false);
@@ -460,7 +489,7 @@ const ContentManager = () => {
       setEditId(null);
     } catch (error) {
       console.error("Error updating city:", error);
-      setErrorMessage(error.response?.data?.message || "Failed to update city. Please try again.");
+      setErrorMessage(error.data?.message || "Failed to update city. Please try again.");
       setTimeout(() => setErrorMessage(""), 3000);
     }
   };
@@ -475,7 +504,7 @@ const ContentManager = () => {
           "Content-Type": "application/json",
         },
       });
-      
+
       setSuccessMessage("City deleted successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
       await fetchCities();
@@ -491,16 +520,16 @@ const ContentManager = () => {
     const loc = locations.find((l) => l.id === id);
     if (loc) {
       // Handle both array and string locality formats
-      let localityArray = Array.isArray(loc.locality) 
-        ? loc.locality 
+      let localityArray = Array.isArray(loc.locality)
+        ? loc.locality
         : loc.locality ? [loc.locality] : [];
-      
+
       // Sort localities alphabetically
       localityArray.sort((a, b) => a.localeCompare(b));
-      
-      setCityForm({ 
-        city: loc.city, 
-        locality: [...localityArray] 
+
+      setCityForm({
+        city: loc.city,
+        locality: [...localityArray]
       });
       setEditId(loc.id);
       setEditLocalityInput("");
@@ -511,7 +540,7 @@ const ContentManager = () => {
   };
 
   // Sort cities alphabetically
-  const sortedLocations = [...locations].sort((a, b) => 
+  const sortedLocations = [...locations].sort((a, b) =>
     a.city?.localeCompare(b.city)
   );
 
@@ -520,7 +549,7 @@ const ContentManager = () => {
     const matchesCity = location.city?.toLowerCase().includes(citySearchTerm.toLowerCase());
     if (localitySearchTerm) {
       const localities = Array.isArray(location.locality) ? location.locality : [location.locality];
-      const matchesLocality = localities.some(loc => 
+      const matchesLocality = localities.some(loc =>
         loc?.toLowerCase().includes(localitySearchTerm.toLowerCase())
       );
       return matchesCity && matchesLocality;
@@ -551,7 +580,7 @@ const ContentManager = () => {
           </div>
         </div>
       )}
-      
+
       {errorMessage && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in">
           <div className="bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2">
@@ -776,10 +805,10 @@ const ContentManager = () => {
                     ) : (
                       filteredLocations?.map((l, i) => {
                         // Ensure localities are sorted alphabetically for display
-                        const sortedLocalities = Array.isArray(l.locality) 
+                        const sortedLocalities = Array.isArray(l.locality)
                           ? [...l.locality].sort((a, b) => a.localeCompare(b))
                           : l.locality ? [l.locality] : [];
-                        
+
                         return (
                           <tr key={l.id} className="hover:bg-slate-50 transition-colors">
                             <td className="px-6 py-3">{i + 1}</td>
@@ -994,7 +1023,7 @@ const ContentManager = () => {
                   placeholder="Enter city name"
                 />
               </div>
-              
+
               <div>
                 <label className="block font-semibold mb-2 text-slate-700">
                   Localities *
@@ -1021,7 +1050,7 @@ const ContentManager = () => {
                     <Plus className="w-5 h-5" /> Add
                   </button>
                 </div>
-                
+
                 {/* Search Bar for Localities */}
                 {cityForm.locality.length > 0 && (
                   <div className="mb-3 relative">
@@ -1035,7 +1064,7 @@ const ContentManager = () => {
                     />
                   </div>
                 )}
-                
+
                 {/* Localities List with Search and Highlight */}
                 {filteredAddLocalities.length > 0 && (
                   <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
@@ -1071,7 +1100,7 @@ const ContentManager = () => {
                   <p className="text-sm text-amber-600 mt-2">Please add at least one locality</p>
                 )}
               </div>
-              
+
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
@@ -1119,7 +1148,7 @@ const ContentManager = () => {
                 <X className="w-6 h-6" />
               </button>
             </div>
-            
+
             <form onSubmit={handleEditCitySubmit} className="p-6 space-y-6">
               {/* City Name Section */}
               <div className="bg-blue-50 rounded-lg p-4">
@@ -1136,7 +1165,7 @@ const ContentManager = () => {
                 />
                 <p className="text-xs text-slate-500 mt-1">This is the main city name</p>
               </div>
-              
+
               {/* Localities Section */}
               <div>
                 <label className="block font-semibold mb-2 text-slate-700">
@@ -1166,7 +1195,7 @@ const ContentManager = () => {
                       <Plus className="w-5 h-5" /> Add Locality
                     </button>
                   </div>
-                  
+
                   {/* Search Bar for Localities in Edit Mode */}
                   {cityForm.locality.length > 0 && (
                     <div className="mb-3 relative">
@@ -1180,7 +1209,7 @@ const ContentManager = () => {
                       />
                     </div>
                   )}
-                  
+
                   {/* Existing Localities List with Search, Highlight, Edit/Delete Options */}
                   {filteredEditLocalities.length > 0 ? (
                     <div>
@@ -1268,7 +1297,7 @@ const ContentManager = () => {
                   )}
                 </div>
               </div>
-              
+
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t">
                 <button
@@ -1285,16 +1314,15 @@ const ContentManager = () => {
                 <button
                   type="submit"
                   disabled={cityForm.locality.length === 0}
-                  className={`flex-1 py-3 rounded-lg font-medium shadow-lg transition-all ${
-                    cityForm.locality.length === 0
+                  className={`flex-1 py-3 rounded-lg font-medium shadow-lg transition-all ${cityForm.locality.length === 0
                       ? "bg-gray-300 cursor-not-allowed text-gray-500"
                       : "bg-green-600 hover:bg-green-700 text-white"
-                  }`}
+                    }`}
                 >
                   Update City
                 </button>
               </div>
-              
+
               {/* Info Message */}
               {cityForm.locality.length > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
@@ -1308,7 +1336,7 @@ const ContentManager = () => {
           </div>
         </div>
       )}
-      
+
       {/* Delete Confirmation Modal */}
       {isDeleteCityModel && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">

@@ -3,7 +3,7 @@ import UserDetails from "../components/UserDetails";
 import {
   Search,
   Users as UsersIcon,
-  Eye,
+  Eye,Delete,
   CheckCircle,
   FileText,
 } from "lucide-react";
@@ -246,7 +246,7 @@ export default function Builders() {
                         {user.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 gap-3 py-4">
                       <button
                         onClick={() => setSelectedUser(user)}
                         title="View Details"
