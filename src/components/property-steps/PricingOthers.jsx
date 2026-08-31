@@ -577,9 +577,6 @@ const PricingOthers = ({ data, updateData, isEditMode, isProject }) => {
 
         {/* SEO Fields - Meta Title, Meta Description, Meta Keywords */}
         <div className="border-t border-gray-200 pt-6 mt-4">
-          <h3 className="font-serif text-xl font-semibold text-blue-900 mb-4">
-            SEO Settings
-          </h3>
           <p className="text-sm text-gray-500 mb-4">
             Optimize your property listing for search engines. These fields help improve your property's visibility.
           </p>
