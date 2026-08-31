@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Plus, X, Video, MapPin, Upload, Edit, Trash2, Check, AlertCircle, Save, Search } from "lucide-react";
 import ApiService from "../hooks/ApiService";
 
-const API_BASE = "http://localhost:3000/api";
+// const API_BASE = "http://localhost:3000/api";
+const API_BASE = "https://service.vmrdaplots.com/api/";
 
 const ContentManager = () => {
   const [videos, setVideos] = useState([]);

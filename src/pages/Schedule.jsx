@@ -152,13 +152,13 @@ const ViewModal = ({ lead, onClose,onDelete }) => {
         <div className="mt-6 text-right">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-[#11233A] text-white rounded-md hover:bg-[#0e1c2e] transition"
+            className="px-4 py-2 mx-5 bg-[#11233A] gap-2 text-white rounded-md hover:bg-[#0e1c2e] transition"
           >
             Close
           </button>
           <button
             onClick={deleteLead}
-            className="px-4 py-2 bg-[#11233A] text-white rounded-md hover:bg-[#0e1c2e] transition"
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-[#0e1c2e] transition"
           >
             Delete
           </button>

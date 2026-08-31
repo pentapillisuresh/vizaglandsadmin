@@ -469,7 +469,7 @@ export default function Properties() {
                       {(property.status === "verified" || property.status === "pending") && (
                         <button
                           onClick={() => handleStatusChange(property.id, "rejected")}
-                          className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm flex items-center justify-center gap-1"
+                          className="flex-1 px-3 py-2 bg-yellow-500 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm flex items-center justify-center gap-1"
                         >
                           <XCircle className="w-4 h-4" /> Reject
                         </button>

@@ -297,7 +297,7 @@ export default function UserDetails({ user, type, onClose }) {
               </button>
               <button
                 onClick={handleRejectDocs}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium"
+                className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium"
               >
                 <XCircle className="w-4 h-4" /> Reject
               </button>
