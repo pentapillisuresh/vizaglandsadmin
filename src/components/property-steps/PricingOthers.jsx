@@ -11,7 +11,7 @@ const PricingOthers = ({ data, updateData, isEditMode, isProject }) => {
   const [privateNotes, setPrivateNotes] = useState('');
   const [metaTitle, setMetaTitle] = useState(`${data.propertyName},${data.title}`);
   const [metaDescription, setMetaDescription] = useState('');
-  const [metaKeywords, setMetaKeywords] = useState(`${data.categoryName} in ${data.address.city},${data.categoryName} in ${data.address.locality}`);
+  const [metaKeywords, setMetaKeywords] = useState('');
   const [approvedBy, setApprovedBy] = useState([]);
   const [amenities, setAmenities] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -25,6 +25,60 @@ const PricingOthers = ({ data, updateData, isEditMode, isProject }) => {
     width: typeof window !== 'undefined' ? window.innerWidth : 0,
     height: typeof window !== 'undefined' ? window.innerHeight : 0,
   });
+
+  useEffect(() => {
+    const keywords = [
+      `${data.categoryName} in ${data.address.city}`,
+      `${data.categoryName} for Sale in ${data.address.city}`,
+      `Residential ${data.categoryName} in ${data.address.city}`,
+      `Open ${data.categoryName} in ${data.address.city}`,
+
+      // Only generate approval keywords when approvedBy has values
+      ...(approvedBy?.length
+        ? approvedBy.map(
+          approval =>
+            `${approval} Approved ${data.categoryName} in ${data.address.city}`
+        )
+        : []),
+
+      ...(approvedBy?.length
+        ? approvedBy.map(
+          approval =>
+            `${approval} ${data.categoryName} in ${data.address.city}`
+        )
+        : []),
+
+      `Buy and Sell Properties in ${data.address.city}`,
+      `Properties in ${data.address.city}`,
+      `Commercial Properties in ${data.address.city}`,
+
+      `${data.categoryName} in ${data.address.locality}`,
+      `${data.categoryName} for Sale in ${data.address.locality}`,
+      `Residential ${data.categoryName} in ${data.address.locality}`,
+      `Open ${data.categoryName} in ${data.address.locality}`,
+
+      // Only generate approval keywords when approvedBy has values
+      ...(approvedBy?.length
+        ? approvedBy.map(
+          approval =>
+            `${approval} Approved ${data.categoryName} in ${data.address.locality}`
+        )
+        : []),
+
+      ...(approvedBy?.length
+        ? approvedBy.map(
+          approval =>
+            `${approval} ${data.categoryName} in ${data.address.locality}`
+        )
+        : []),
+
+      `Buy and Sell Properties in ${data.address.locality}`,
+      `Properties in ${data.address.locality}`,
+      `Commercial Properties in ${data.address.locality}`,
+    ];
+
+    setMetaKeywords(keywords.join(', '));
+  }, [approvedBy, data]);
 
   const navigate = useNavigate();
 
