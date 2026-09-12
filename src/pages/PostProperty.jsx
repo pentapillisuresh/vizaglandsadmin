@@ -37,6 +37,7 @@ export default function PostProperty() {
 
   const [propertyData, setPropertyData] = useState({
     categoryId: '',
+    clientId: '',
     categoryName:'',
     propertyName: '',
     title: '',
@@ -124,6 +125,7 @@ export default function PostProperty() {
           ...prev,
           // Main Property Details
           categoryId: property.categoryId || "",
+          clientId: property.clientId || "",
           id:listingParam,
           categoryName: property.category.name || "",
           propertySubtype: property.category?.name || "",
