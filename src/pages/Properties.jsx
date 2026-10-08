@@ -146,9 +146,16 @@ export default function Properties() {
     }
   };
 
+  // ---------- Mark Sold ----------
   const handleSold = async (id) => {
     if (!window.confirm("Mark this property as SOLD?")) return;
     await updateProperty(id, { isSold: true }, "Property marked as sold.");
+  };
+
+  // ---------- Mark Unsold (NEW) ----------
+  const handleUnsold = async (id) => {
+    if (!window.confirm("Mark this property as UNSOLD (available)?")) return;
+    await updateProperty(id, { isSold: false }, "Property marked as unsold.");
   };
 
   // ---------- Add / Edit navigation ----------
@@ -190,7 +197,7 @@ export default function Properties() {
       matchesFilter = true;
     } else if (filter === "builder" && p?.client?.role === "builder") {
       matchesFilter = true;
-    } else if (filter === "admin" && (p.clientId == null)) {   // 👈 NEW: Admin filter
+    } else if (filter === "admin" && (p.clientId == null)) {   // 👈 Admin filter
       matchesFilter = true;
     }
 
@@ -271,7 +278,7 @@ export default function Properties() {
         <div className="mb-4">
           <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Role:</label>
           <div className="flex gap-2 flex-wrap">
-            {["owner", "agent", "builder", "admin"].map((role) => (  // 👈 Added "admin"
+            {["owner", "agent", "builder", "admin"].map((role) => (
               <button
                 key={role}
                 onClick={() => setFilter(role)}
@@ -493,12 +500,23 @@ export default function Properties() {
                       >
                         <Trash2 className="w-4 h-4" /> Delete
                       </button>
+
+                      {/* ---------- Mark Sold / Mark Unsold ---------- */}
                       {(!property.isSold && property.status === "verified") && (
                         <button
                           onClick={() => handleSold(property.id)}
                           className="flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors text-sm font-medium"
                         >
                           <CheckCircle className="w-4 h-4" /> Mark Sold
+                        </button>
+                      )}
+
+                      {(property.isSold === true) && (
+                        <button
+                          onClick={() => handleUnsold(property.id)}
+                          className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium"
+                        >
+                          <XCircle className="w-4 h-4" /> Mark Unsold
                         </button>
                       )}
                     </div>

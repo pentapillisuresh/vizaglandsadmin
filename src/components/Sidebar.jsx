@@ -23,8 +23,16 @@ export default function Sidebar() {
     { path: "/builders", icon: Users, label: "Builders", role: "builder" },
     { path: "/schedule", icon: Calendar, label: "Leads" },
     { path: "/blog", icon: BluetoothSearching, label: "Blog" },
-    { path: "/buy-development", icon: Calendar, label: "Property Enquiry" },
-    { path: "/content", icon: LayoutDashboard, label: "Manage Content" },
+    {
+      path: "/buy-development",
+      icon: Calendar,
+      label: "Property Enquiry",
+    },
+    {
+      path: "/content",
+      icon: LayoutDashboard,
+      label: "Manage Content",
+    },
     { path: "/settings", icon: Settings, label: "Settings" },
   ];
 
@@ -35,12 +43,13 @@ export default function Sidebar() {
 
   return (
     <aside className="w-64 h-screen fixed left-0 top-0 bg-gradient-to-b from-[#1e3a5f] to-[#0f1e33] shadow-lg flex flex-col z-50">
-      {/* Header */}
-      <div className="px-6 border-b border-white/10 flex items-center gap-3">
+      
+      {/* Header / Logo */}
+      <div className="h-20 px-6 bg-white border-b border-gray-200 flex items-center justify-center">
         <img
           src="/vizaglogo.jpg"
           alt="VizagLands Logo"
-          className="w-full h-20 object-contain"
+          className="w-full h-16 object-contain"
         />
       </div>
 
@@ -48,10 +57,15 @@ export default function Sidebar() {
       <nav className="flex-1 overflow-y-auto py-4 no-scrollbar">
         {menuItems.map((item) => {
           const Icon = item.icon;
+
           return (
             <button
               key={item.path + item.label}
-              onClick={() => navigate(item.path, { state: { role: item.role } })}
+              onClick={() =>
+                navigate(item.path, {
+                  state: { role: item.role },
+                })
+              }
               className="flex items-center w-full px-6 py-3 my-1 text-sm font-medium text-left transition-all border-l-4 text-white/70 border-transparent hover:bg-white/5 hover:text-white hover:border-white/20"
             >
               <Icon className="w-5 h-5 mr-3" />
