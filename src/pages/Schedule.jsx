@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import ApiService from '../hooks/ApiService';
-import { Eye, Edit, X } from 'lucide-react';
+import { Eye, Edit, X, Trash2 } from 'lucide-react';
 
 // ============================================================
 // Custom Hook: useLeads
@@ -234,6 +234,79 @@ const EditModal = ({ lead, onClose, onSave, isSaving }) => {
 };
 
 // ============================================================
+// Delete Confirmation Modal
+// ============================================================
+const DeleteModal = ({ lead, onClose, onConfirm, isDeleting }) => {
+  if (!lead) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 text-gray-500 hover:text-gray-800 transition-colors"
+          aria-label="Close modal"
+          disabled={isDeleting}
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <h2 className="text-2xl font-semibold text-[#11233A] mb-4">Delete Lead</h2>
+        
+        <div className="mb-6">
+          <p className="text-gray-700">
+            Are you sure you want to delete the lead from <strong>{lead.name}</strong>?
+          </p>
+          <p className="text-sm text-red-500 mt-2">
+            This action cannot be undone.
+          </p>
+        </div>
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400 transition disabled:opacity-50"
+            disabled={isDeleting}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onConfirm(lead.id)}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition disabled:opacity-50"
+            disabled={isDeleting}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// Toast Notification Component
+// ============================================================
+const Toast = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+  
+  return (
+    <div className={`fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-[60] flex items-center gap-3 animate-slide-in`}>
+      <span>{message}</span>
+      <button onClick={onClose} className="text-white hover:text-gray-200">
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  );
+};
+
+// ============================================================
 // Main Component
 // ============================================================
 const Schedule = () => {
@@ -245,7 +318,12 @@ const Schedule = () => {
 
   const [viewModalLead, setViewModalLead] = useState(null);
   const [editModalLead, setEditModalLead] = useState(null);
+  const [deleteModalLead, setDeleteModalLead] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Toast state
+  const [toast, setToast] = useState(null);
 
   // Set first tab when data loads
   useEffect(() => {
@@ -292,9 +370,18 @@ const Schedule = () => {
     setEditModalLead(lead);
   }, []);
 
+  const handleDeleteModal = useCallback((lead) => {
+    setDeleteModalLead(lead);
+  }, []);
+
   const closeModals = useCallback(() => {
     setViewModalLead(null);
     setEditModalLead(null);
+    setDeleteModalLead(null);
+  }, []);
+
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ message, type });
   }, []);
 
   const handleSaveLead = useCallback(
@@ -304,13 +391,13 @@ const Schedule = () => {
       try {
         const adminToken = localStorage.getItem('token');
         if (!adminToken) {
-          alert('No authentication token found. Please log in.');
+          showToast('No authentication token found. Please log in.', 'error');
           return;
         }
 
         await ApiService.put(
           `/leads/${id}`,
-          { status, remark }, // API expects "remark"
+          { status, remark },
           {
             headers: {
               Authorization: `Bearer ${adminToken}`,
@@ -328,15 +415,78 @@ const Schedule = () => {
         });
 
         closeModals();
-        alert('Lead updated successfully!');
+        showToast('Lead updated successfully!', 'success');
       } catch (err) {
         console.error('Error updating lead:', err);
-        alert('Failed to update lead. Please try again.');
+        showToast('Failed to update lead. Please try again.', 'error');
       } finally {
         setIsSaving(false);
       }
     },
-    [activeTab, closeModals]
+    [activeTab, closeModals, showToast]
+  );
+
+  const handleDeleteLead = useCallback(
+    async (id) => {
+      if (!id) return;
+      setIsDeleting(true);
+      try {
+        const adminToken = localStorage.getItem('token');
+        if (!adminToken) {
+          showToast('No authentication token found. Please log in.', 'error');
+          setIsDeleting(false);
+          return;
+        }
+
+        await ApiService.delete(`/leads/${id}`, {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        // Close delete modal immediately after successful deletion
+        setDeleteModalLead(null);
+        
+        // Optimistic update - remove the lead from data
+        setData((prev) => {
+          const updatedTab = (prev[activeTab] || []).filter(
+            (item) => item.id !== id
+          );
+          
+          // If the tab becomes empty, remove the tab
+          if (updatedTab.length === 0) {
+            const newData = { ...prev };
+            delete newData[activeTab];
+            
+            // Update tabs
+            const newTabs = Object.keys(newData);
+            setTabs(newTabs);
+            
+            // If there are no tabs left, reset active tab
+            if (newTabs.length === 0) {
+              setActiveTab('');
+            } else {
+              // Switch to the first available tab
+              setActiveTab(newTabs[0]);
+            }
+            
+            return newData;
+          }
+          
+          return { ...prev, [activeTab]: updatedTab };
+        });
+
+        // Show success message
+        showToast('Lead deleted successfully!', 'success');
+      } catch (err) {
+        console.error('Error deleting lead:', err);
+        showToast('Failed to delete lead. Please try again.', 'error');
+      } finally {
+        setIsDeleting(false);
+      }
+    },
+    [activeTab, showToast]
   );
 
   const renderStatusBadge = (status) => {
@@ -480,11 +630,12 @@ const Schedule = () => {
                         <td className="py-4 px-6 text-gray-700">{item.city}</td>
                         <td className="py-4 px-6 text-gray-700">{item.location}</td>
                         <td className="py-4 px-6">{renderStatusBadge(item.status)}</td>
-                        <td className="py-4 px-6 flex gap-2">
+                        <td className="py-4 px-6 flex gap-3">
                           <button
                             onClick={() => handleViewModal(item)}
                             className="text-gray-600 hover:text-blue-600 transition-colors"
                             aria-label="View lead details"
+                            title="View"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
@@ -492,8 +643,17 @@ const Schedule = () => {
                             onClick={() => handleEditModal(item)}
                             className="text-gray-600 hover:text-green-600 transition-colors"
                             aria-label="Edit lead"
+                            title="Edit"
                           >
                             <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteModal(item)}
+                            className="text-gray-600 hover:text-red-600 transition-colors"
+                            aria-label="Delete lead"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </td>
                       </tr>
@@ -521,7 +681,41 @@ const Schedule = () => {
             isSaving={isSaving}
           />
         )}
+        {deleteModalLead && (
+          <DeleteModal
+            lead={deleteModalLead}
+            onClose={closeModals}
+            onConfirm={handleDeleteLead}
+            isDeleting={isDeleting}
+          />
+        )}
+
+        {/* Toast Notification */}
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )}
       </div>
+
+      {/* Add animation styles */}
+      <style jsx>{`
+        @keyframes slideIn {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-in {
+          animation: slideIn 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 };
