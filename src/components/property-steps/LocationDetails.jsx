@@ -375,6 +375,7 @@ const LocationDetails = ({ data, updateData, onNext, isEditMode, isProject }) =>
           value={roadFacing}
           onChange={handleRoadFacingChange}
           placeholder="100"
+          onWheel={(e) => e.currentTarget.blur()}
           className={`w-full px-4 text-gray-600 py-3 border rounded-lg
                focus:ring-2 focus:ring-orange-500 focus:border-transparent
                outline-none font-roboto ${
@@ -464,6 +465,15 @@ const LocationDetails = ({ data, updateData, onNext, isEditMode, isProject }) =>
               <option value="3 km">3 km</option>
               <option value="4 km">4 km</option>
               <option value="5 km">5 km</option>
+              <option value="8 km">8 km</option>
+              <option value="10 km">10 km</option>
+              <option value="15 km">15 km</option>
+              <option value="20 km">20 km</option>
+              <option value="25 km">25 km</option>
+              <option value="30 km">30 km</option>
+              <option value="35 km">35 km</option>
+              <option value="40 km">40 km</option>
+              <option value="50 km">50 km</option>
             </select>
             {advantages.length > 1 && (
               <button

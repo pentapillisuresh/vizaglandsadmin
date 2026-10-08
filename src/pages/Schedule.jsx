@@ -78,16 +78,37 @@ const useLeads = () => {
     fetchLeads();
   }, [fetchLeads]);
 
-  return { data, tabs, loading, error, refetch: fetchLeads };
+  return { data,setData, tabs, loading, error, refetch: fetchLeads };
 };
 
 // ============================================================
 // Modal Components
 // ============================================================
-const ViewModal = ({ lead, onClose }) => {
+const ViewModal = ({ lead, onClose,onDelete }) => {
   if (!lead) return null;
 
   const propertyUrl = lead.slug ? `https://vmrdaplots.com/property/${lead.slug}` : null;
+
+  const deleteLead = async () => {
+    const id=String(lead.id).trim();
+    console.log("leadID::",  id)
+    const adminToken = localStorage.getItem('token');
+
+    const res = await ApiService.delete(`/leads/${id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (res) {
+      window.location.reload();
+    } else {
+      console.log("rrr::", res?.message)
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
@@ -131,9 +152,15 @@ const ViewModal = ({ lead, onClose }) => {
         <div className="mt-6 text-right">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-[#11233A] text-white rounded-md hover:bg-[#0e1c2e] transition"
+            className="px-4 py-2 mx-5 bg-[#11233A] gap-2 text-white rounded-md hover:bg-[#0e1c2e] transition"
           >
             Close
+          </button>
+          <button
+            onClick={deleteLead}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-[#0e1c2e] transition"
+          >
+            Delete
           </button>
         </div>
       </div>
@@ -310,7 +337,7 @@ const Toast = ({ message, type, onClose }) => {
 // Main Component
 // ============================================================
 const Schedule = () => {
-  const { data, tabs, loading, error, refetch } = useLeads();
+  const { data, setData, tabs, loading, error, refetch } = useLeads();
 
   const [activeTab, setActiveTab] = useState('');
   const [selectedCity, setSelectedCity] = useState('All');

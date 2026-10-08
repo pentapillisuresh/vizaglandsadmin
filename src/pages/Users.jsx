@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import UserDetails from "../components/UserDetails";
-import {Search,Users as UsersIcon,Eye,CheckCircle,FileText} from "lucide-react";
+import { Search, Users as UsersIcon, Eye, CheckCircle, FileText, Delete } from "lucide-react";
 import ApiService from "../hooks/ApiService";
 import { useLocation } from "react-router-dom";
 
@@ -12,85 +12,89 @@ export default function Users() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const location = useLocation();
-  const {role} = location.state || {};  // 🔹 State
+  const { role } = location.state || {};  // 🔹 State
+
   // 🔹 Fetch users from API
-  useEffect(() => {
-    const fetchOwners = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const adminToken = localStorage.getItem('token');
+  const fetchOwners = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const adminToken = localStorage.getItem('token');
 
-        const res = await ApiService.get(`/clients/getClientByRole/${role}`,
-          {
-            headers: {
-              Authorization: `Bearer ${adminToken}`,
-              'Content-Type': 'application/json'
-            }
+      const res = await ApiService.get(`/clients/getClientByRole/${role}`,
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            'Content-Type': 'application/json'
           }
-        );
-        if (!res) throw new Error("Failed to fetch owners");
-        
-
-        if (Array.isArray(res.clients)) {
-          // Normalize the data to match table expectations
-          const formattedUsers = res.clients.map((client) => ({
-            id: client.id,
-            fullName: client.fullName,
-            email: client.email,
-            phone: client.phoneNumber,
-            companyName: client.companyName,
-            address: client.address,
-            area:client.area,
-            kycProofName: client.kycProofName,
-            kycProofNumber: client.kycProofNumber,
-            kycUploadFile: client.kycUploadFile,
-            createdAt: client.createdAt,
-            isActive: client.status === "active",
-            isDocsVerified: client.isVerified,
-            propertiesAdded: client.properties?.length || 0,
-            propertyLimit: client.postLimit || 0,
-            canAddProperty:
-              (client.properties?.length || 0) < (client.postLimit || 0),
-            properties: client.properties || [],
-            profilePic: client.profilePic,
-          }));
-          setUsers(formattedUsers);
-        } else {
-          setUsers([]);
         }
-      } catch (err) {
-        console.error("Error fetching owners:", err);
-        setError("Failed to load data. Please try again.");
-      } finally {
-        setLoading(false);
+      );
+      if (!res) throw new Error("Failed to fetch owners");
+
+
+      if (Array.isArray(res.clients)) {
+        // Normalize the data to match table expectations
+        const formattedUsers = res.clients.map((client) => ({
+          id: client.id,
+          fullName: client.fullName,
+          email: client.email,
+          phone: client.phoneNumber,
+          companyName: client.companyName,
+          address: client.address,
+          area: client.area,
+          kycProofName: client.kycProofName,
+          kycProofNumber: client.kycProofNumber,
+          kycUploadFile: client.kycUploadFile,
+          createdAt: client.createdAt,
+          isActive: client.status === "active",
+          isDocsVerified: client.isVerified,
+          propertiesAdded: client.properties?.length || 0,
+          propertyLimit: client.postLimit || 0,
+          canAddProperty:
+            (client.properties?.length || 0) < (client.postLimit || 0),
+          properties: client.properties || [],
+          profilePic: client.profilePic,
+        }));
+        setUsers(formattedUsers);
+      } else {
+        setUsers([]);
       }
-    };
+    } catch (err) {
+      console.error("Error fetching owners:", err);
+      setError("Failed to load data. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     if (!role) return;
     fetchOwners();
   }, [role]);
 
+  //delete user
+
   // 🔹 Filter logic
   const filteredUsers = users.filter((user) => {
     const search = searchTerm.toLowerCase();
-  
+
     const fullName = (user.fullName || "").toLowerCase();
     const email = (user.email || "").toLowerCase();
     const phone = (user.phone || "");
-  
+
     const matchesSearch =
       fullName.includes(search) ||
       email.includes(search) ||
       phone.includes(searchTerm);
-  
+
     const matchesFilter =
       filter === "all" ||
       (filter === "active" && user.isActive) ||
       (filter === "inactive" && !user.isActive);
-  
+
     return matchesSearch && matchesFilter;
   });
-  
+
   // 🔹 Loading state
   if (loading) {
     return (
@@ -146,8 +150,8 @@ export default function Users() {
                 key={status}
                 onClick={() => setFilter(status)}
                 className={`px-4 py-2 text-sm rounded-lg border transition font-medium ${filter === status
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                   }`}
               >
                 {status?.charAt(0).toUpperCase() + status.slice(1)}
@@ -241,8 +245,8 @@ export default function Users() {
                     <td className="px-6 py-4">
                       <span
                         className={`px-2.5 py-1 rounded-full text-xs font-semibold ${user.isActive
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
                           }`}
                       >
                         {user.isActive ? "Active" : "Inactive"}

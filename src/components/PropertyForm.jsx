@@ -136,6 +136,7 @@ export default function PropertyForm({ initialData = null, onSubmit, onCancel, a
           <input
             type="number"
             placeholder="Price (₹)"
+            onWheel={(e) => e.currentTarget.blur()}
             value={formData.price}
             onChange={(e) => handleChange("price", e.target.value)}
             className="border rounded-lg px-3 py-2 text-sm w-full"
@@ -219,6 +220,7 @@ export default function PropertyForm({ initialData = null, onSubmit, onCancel, a
           <input
             type="number"
             placeholder="Bedrooms"
+            onWheel={(e) => e.currentTarget.blur()}
             value={formData.propertyProfile.bedrooms}
             onChange={(e) => handleChange("bedrooms", e.target.value, "propertyProfile")}
             className="border rounded-lg px-3 py-2 text-sm"
@@ -232,6 +234,7 @@ export default function PropertyForm({ initialData = null, onSubmit, onCancel, a
           />
           <input
             type="number"
+            onWheel={(e) => e.currentTarget.blur()}
             placeholder="Balconies"
             value={formData.propertyProfile.balconies}
             onChange={(e) => handleChange("balconies", e.target.value, "propertyProfile")}
@@ -239,6 +242,7 @@ export default function PropertyForm({ initialData = null, onSubmit, onCancel, a
           />
           <input
             type="text"
+            onWheel={(e) => e.currentTarget.blur()}
             placeholder="Floor Number"
             value={formData.propertyProfile.floorNumber}
             onChange={(e) => handleChange("floorNumber", e.target.value, "propertyProfile")}
@@ -287,6 +291,7 @@ export default function PropertyForm({ initialData = null, onSubmit, onCancel, a
           <input
             type="number"
             placeholder="Parking Spaces"
+            onWheel={(e) => e.currentTarget.blur()}
             value={formData.propertyProfile.parkingSpaces}
             onChange={(e) => handleChange("parkingSpaces", e.target.value, "propertyProfile")}
             className="border rounded-lg px-3 py-2 text-sm"

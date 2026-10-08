@@ -45,7 +45,7 @@ export default function Dashboard() {
         setLoading(true);
         const adminToken = localStorage.getItem('token');
 
-        const res = await ApiService.get(`/clients/getClientByRole/admin`,
+        const res = await ApiService.get(`/clients/getClientByRole/builder`,
           {
             headers: {
               Authorization: `Bearer ${adminToken}`,
@@ -199,7 +199,7 @@ export default function Dashboard() {
         {/* Agents */}
         <div
           onClick={() => {
-            navigate("/users", { state: { role: "agent" } })
+            navigate("/agents", { state: { role: "agent" } })
           }} 
           className="cursor-pointer bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg hover:scale-[1.03] transition-transform"
         >
@@ -215,7 +215,7 @@ export default function Dashboard() {
         {/* Builders */}
         <div
           onClick={() => {
-            navigate("/users", { state: { role: "builders" } })
+            navigate("/builders", { state: { role: "builder" } })
           }}
           className="cursor-pointer bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white shadow-lg hover:scale-[1.03] transition-transform"
         >

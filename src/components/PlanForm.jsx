@@ -65,6 +65,7 @@ export default function PlanForm({ plan, onClose }) {
               <label className="form-label">Price (₹) *</label>
               <input
                 type="number"
+                onWheel={(e) => e.currentTarget.blur()}
                 name="price"
                 value={formData.price}
                 onChange={handleChange}
@@ -89,6 +90,7 @@ export default function PlanForm({ plan, onClose }) {
               <input
                 type="number"
                 name="durationDays"
+                onWheel={(e) => e.currentTarget.blur()}
                 value={formData.durationDays}
                 onChange={handleChange}
                 className="form-input"
