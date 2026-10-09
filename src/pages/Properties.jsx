@@ -61,6 +61,17 @@ export default function Properties() {
     }
   };
 
+  // ---------- Slug helper (MUST match PropertyDetail's slug logic) ----------
+  const createSlug = (title) => {
+    if (!title) return "";
+    return title
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, "")   // remove special chars
+      .replace(/\s+/g, "-")        // spaces -> hyphens
+      .replace(/--+/g, "-")        // collapse multiple hyphens
+      .trim();
+  };
+
   const getStatusColor = (status) => {
     const map = {
       verified: "bg-green-100 text-green-700",
@@ -152,21 +163,46 @@ export default function Properties() {
     await updateProperty(id, { isSold: true }, "Property marked as sold.");
   };
 
-  // ---------- Mark Unsold (NEW) ----------
+  // ---------- Mark Unsold ----------
   const handleUnsold = async (id) => {
     if (!window.confirm("Mark this property as UNSOLD (available)?")) return;
     await updateProperty(id, { isSold: false }, "Property marked as unsold.");
   };
 
-  // ---------- Add / Edit navigation ----------
+  // ---------- Add Property (opens in NEW TAB) ----------
   const handleAddProperty = () => {
-    navigate("/post-property", { state: { isProject: false } });
+    // Save state so PostProperty can read it in the new tab
+    // (location.state does NOT survive window.open)
+    sessionStorage.setItem(
+      "postProperty_state",
+      JSON.stringify({ isProject: false, mode: "add" })
+    );
+
+    // Open in a new tab
+    window.open("/post-property", "_blank", "noopener,noreferrer");
   };
 
+  // ---------- Edit Property (same tab navigation) ----------
   const handleEdit = (listing) => {
     navigate(`/post-property?edit=${listing.id}`, {
       state: { listing, mode: "edit", isProject: false }
     });
+  };
+
+  // ---------- View in new window (uses SLUG + sessionStorage) ----------
+  const handleView = (property) => {
+    const slug = createSlug(property.title);
+    sessionStorage.setItem(`property_${slug}`, JSON.stringify(property));
+    sessionStorage.setItem(`property_id_${property.id}`, JSON.stringify(property));
+    // Pass source in the URL — reliable across tabs
+    window.open(`/property/${slug}?from=properties`, "_blank", "noopener,noreferrer");
+  };
+
+  // ---------- Card click handler ----------
+  const handleCardClick = (property, e) => {
+    // Ignore if a button/link inside the card was clicked
+    if (e.target.closest("button") || e.target.closest("a")) return;
+    handleView(property);
   };
 
   // ---------- Filtering ----------
@@ -177,7 +213,6 @@ export default function Properties() {
       p.address?.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.address?.locality?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Role / Status filter
     let matchesFilter = false;
     if (filter === "all") {
       matchesFilter = true;
@@ -197,7 +232,7 @@ export default function Properties() {
       matchesFilter = true;
     } else if (filter === "builder" && p?.client?.role === "builder") {
       matchesFilter = true;
-    } else if (filter === "admin" && (p.clientId == null)) {   // 👈 Admin filter
+    } else if (filter === "admin" && (p.clientId == null)) {
       matchesFilter = true;
     }
 
@@ -340,8 +375,9 @@ export default function Properties() {
               const isPendingOrRejected = property.status === "pending" || property.status === "rejected";
               return (
                 <div
-                  key={property.id} 
-                  className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col h-full"
+                  key={property.id}
+                  onClick={(e) => handleCardClick(property, e)}
+                  className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col h-full cursor-pointer"
                 >
                   <div className="relative">
                     <img
@@ -353,10 +389,10 @@ export default function Properties() {
                         e.currentTarget.src = '/vizaglogo.jpg';
                       }}
                     />
-                    {/* Active Toggle (ThumbsUp) */}
+                    {/* Active Toggle */}
                     <div className="absolute top-3 right-3 flex items-center gap-2">
                       <button
-                        onClick={() => handleToggleActive(property.id, property.isActive)}
+                        onClick={(e) => { e.stopPropagation(); handleToggleActive(property.id, property.isActive); }}
                         disabled={isPendingOrRejected}
                         className={`p-2 rounded-full backdrop-blur-sm transition-all duration-300 
                           ${isPendingOrRejected
@@ -380,7 +416,7 @@ export default function Properties() {
                     <div className="absolute bottom-3 right-3 flex items-center gap-3 bg-black/50 px-3 py-1 rounded-full backdrop-blur-sm">
                       <span className="text-sm font-semibold text-white drop-shadow">Handover</span>
                       <button
-                        onClick={() => handleToggleHandOver(property.id, property.isHandOver)}
+                        onClick={(e) => { e.stopPropagation(); handleToggleHandOver(property.id, property.isHandOver); }}
                         disabled={isPendingOrRejected}
                         className={`relative inline-flex items-center h-6 w-11 rounded-full transition-all
                           ${isPendingOrRejected
@@ -467,7 +503,7 @@ export default function Properties() {
                     <div className="flex gap-2 flex-wrap mt-auto">
                       {(property.status === "rejected" || property.status === "pending") && (
                         <button
-                          onClick={() => handleStatusChange(property.id, "verified")}
+                          onClick={(e) => { e.stopPropagation(); handleStatusChange(property.id, "verified"); }}
                           className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm flex items-center justify-center gap-1"
                         >
                           <CheckCircle className="w-4 h-4" /> Approve
@@ -475,36 +511,34 @@ export default function Properties() {
                       )}
                       {(property.status === "verified" || property.status === "pending") && (
                         <button
-                          onClick={() => handleStatusChange(property.id, "rejected")}
+                          onClick={(e) => { e.stopPropagation(); handleStatusChange(property.id, "rejected"); }}
                           className="flex-1 px-3 py-2 bg-yellow-500 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm flex items-center justify-center gap-1"
                         >
                           <XCircle className="w-4 h-4" /> Reject
                         </button>
                       )}
                       <button
-                        onClick={() => handleEdit(property)}
+                        onClick={(e) => { e.stopPropagation(); handleEdit(property); }}
                         className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm flex items-center justify-center gap-1"
                       >
                         <Edit className="w-4 h-4" /> Edit
                       </button>
                       <button
-                       onClick={() =>
-                        navigate(`/property/${property.id}`, { state: { property } })
-                      }
-                      className="px-3 py-2 bg-white text-blue-600 rounded-lg border border-blue-600 hover:bg-blue-600 hover:text-white transition font-medium text-sm flex items-center justify-center gap-1"                      >
+                        onClick={(e) => { e.stopPropagation(); handleView(property); }}
+                        className="px-3 py-2 bg-white text-blue-600 rounded-lg border border-blue-600 hover:bg-blue-600 hover:text-white transition font-medium text-sm flex items-center justify-center gap-1"
+                      >
                         <Edit className="w-4 h-4" /> View
                       </button>
                       <button
-                        onClick={() => handleDelete(property.id)}
+                        onClick={(e) => { e.stopPropagation(); handleDelete(property.id); }}
                         className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm flex items-center justify-center gap-1"
                       >
                         <Trash2 className="w-4 h-4" /> Delete
                       </button>
 
-                      {/* ---------- Mark Sold / Mark Unsold ---------- */}
                       {(!property.isSold && property.status === "verified") && (
                         <button
-                          onClick={() => handleSold(property.id)}
+                          onClick={(e) => { e.stopPropagation(); handleSold(property.id); }}
                           className="flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors text-sm font-medium"
                         >
                           <CheckCircle className="w-4 h-4" /> Mark Sold
@@ -513,7 +547,7 @@ export default function Properties() {
 
                       {(property.isSold === true) && (
                         <button
-                          onClick={() => handleUnsold(property.id)}
+                          onClick={(e) => { e.stopPropagation(); handleUnsold(property.id); }}
                           className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium"
                         >
                           <XCircle className="w-4 h-4" /> Mark Unsold

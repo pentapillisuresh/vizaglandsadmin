@@ -60,6 +60,17 @@ export default function Projects() {
     }
   };
 
+  // ✅ ADDED: createSlug
+  const createSlug = (title) => {
+    if (!title) return "";
+    return title
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/--+/g, "-")
+      .trim();
+  };
+
   const getStatusColor = (status) => {
     const map = {
       verified: "bg-green-100 text-green-700",
@@ -142,15 +153,35 @@ export default function Projects() {
     await updateProject(id, { isSold: true }, "Project marked as sold.");
   };
 
-  // ---------- Add / Edit navigation ----------
+  // ---------- Add / Edit ----------
   const handleAddProject = () => {
-    navigate("/post-property", { state: { isProject: true } });
+    // Open in new tab
+    sessionStorage.setItem(
+      "postProperty_state",
+      JSON.stringify({ isProject: true, mode: "add" })
+    );
+    window.open("/post-property", "_blank", "noopener,noreferrer");
   };
 
   const handleEdit = (project) => {
     navigate(`/post-property?edit=${project.id}`, {
       state: { listing: project, mode: "edit", isProject: true }
     });
+  };
+
+  // ✅ ADDED: handleView (opens new tab with slug + sessionStorage)
+  const handleView = (project) => {
+    const slug = createSlug(project.title) || String(project.id);
+    sessionStorage.setItem(`property_${slug}`, JSON.stringify(project));
+    sessionStorage.setItem(`property_id_${project.id}`, JSON.stringify(project));
+    // Pass source in the URL — reliable across tabs
+    window.open(`/property/${slug}?from=projects`, "_blank", "noopener,noreferrer");
+  };
+
+  // ✅ ADDED: card click
+  const handleCardClick = (project, e) => {
+    if (e.target.closest("button") || e.target.closest("a")) return;
+    handleView(project);
   };
 
   // ---------- Filtering ----------
@@ -162,29 +193,17 @@ export default function Projects() {
       p.address?.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.address?.locality?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Combined role/status filter (including 'admin')
     let matchesFilter = false;
-    if (filter === "all") {
-      matchesFilter = true;
-    } else if (filter === "pending" && p.status === "pending") {
-      matchesFilter = true;
-    } else if (filter === "rejected" && p.status === "rejected") {
-      matchesFilter = true;
-    } else if (filter === "verified" && p.status === "verified") {
-      matchesFilter = true;
-    } else if (filter === "approved" && (p.status === "verified" || p.status === "approved")) {
-      matchesFilter = true;
-    } else if (filter === "sold" && p.isSold === true) {
-      matchesFilter = true;
-    } else if (filter === "owner" && p?.client?.role === "owner") {
-      matchesFilter = true;
-    } else if (filter === "agent" && p?.client?.role === "agent") {
-      matchesFilter = true;
-    } else if (filter === "builder" && p?.client?.role === "builder") {
-      matchesFilter = true;
-    } else if (filter === "admin" && (p.clientId == null)) {   // 👈 NEW: Admin filter
-      matchesFilter = true;
-    }
+    if (filter === "all") matchesFilter = true;
+    else if (filter === "pending" && p.status === "pending") matchesFilter = true;
+    else if (filter === "rejected" && p.status === "rejected") matchesFilter = true;
+    else if (filter === "verified" && p.status === "verified") matchesFilter = true;
+    else if (filter === "approved" && (p.status === "verified" || p.status === "approved")) matchesFilter = true;
+    else if (filter === "sold" && p.isSold === true) matchesFilter = true;
+    else if (filter === "owner" && p?.client?.role === "owner") matchesFilter = true;
+    else if (filter === "agent" && p?.client?.role === "agent") matchesFilter = true;
+    else if (filter === "builder" && p?.client?.role === "builder") matchesFilter = true;
+    else if (filter === "admin" && (p.clientId == null)) matchesFilter = true;
 
     return matchesSearch && matchesFilter;
   });
@@ -220,7 +239,7 @@ export default function Projects() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      {/* Notification Toast */}
+      {/* Notification */}
       {notification.show && (
         <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in-down">
           <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-4 rounded-xl shadow-2xl flex items-center gap-3 border border-green-400">
@@ -263,7 +282,7 @@ export default function Projects() {
         <div className="mb-4">
           <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Role:</label>
           <div className="flex gap-2 flex-wrap">
-            {["owner", "agent", "builder", "admin"].map((role) => (   // 👈 Added "admin"
+            {["owner", "agent", "builder", "admin"].map((role) => (
               <button
                 key={role}
                 onClick={() => setFilter(role)}
@@ -325,23 +344,21 @@ export default function Projects() {
               const isPendingOrRejected = project.status === "pending" || project.status === "rejected";
               return (
                 <div
-                  key={project.id}  
-                  className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col h-full"
+                  key={project.id}
+                  onClick={(e) => handleCardClick(project, e)}
+                  className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col h-full cursor-pointer"
                 >
                   <div className="relative">
                     <img
                       src={getPhotoSrc(project.photos)}
                       alt={project.title}
                       className="w-full h-48 object-cover"
-                      onError={(e) => {
-                        e.target.src = '/vizaglogo.jpg';
-                      }}
+                      onError={(e) => { e.target.src = '/vizaglogo.jpg'; }}
                     />
 
-                    {/* Active Toggle */}
                     <div className="absolute top-3 right-3 flex items-center gap-2">
                       <button
-                        onClick={() => handleToggleActive(project.id, project.isActive)}
+                        onClick={(e) => { e.stopPropagation(); handleToggleActive(project.id, project.isActive); }}
                         disabled={isPendingOrRejected}
                         className={`p-2 rounded-full backdrop-blur-sm transition-all duration-300 
                           ${isPendingOrRejected
@@ -353,21 +370,13 @@ export default function Projects() {
                       >
                         <ThumbsUpIcon
                           className={`w-6 h-6 transition-all duration-300 
-                            ${project.isActive
-                              ? "fill-white text-white"
-                              : "text-gray-700 hover:text-red-500"
-                            }`}
+                            ${project.isActive ? "fill-white text-white" : "text-gray-700 hover:text-red-500"}`}
                         />
                       </button>
                     </div>
 
-                    {/* Status badge */}
                     <div className="absolute top-3 left-3">
-                      <span
-                        className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${getStatusColor(
-                          project.status
-                        )}`}
-                      >
+                      <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${getStatusColor(project.status)}`}>
                         {getStatusIcon(project.status)}
                         {project.status}
                       </span>
@@ -407,30 +416,15 @@ export default function Projects() {
                     </div>
 
                     <div className="text-xs text-gray-500 mb-3 space-y-1">
-                      <p>
-                        Posted by:{" "}
-                        <span className="font-medium text-gray-700 capitalize">
-                          {project?.client?.role || "Admin"}
-                        </span>
-                      </p>
-                      <p>
-                        Owner:{" "}
-                        <span className="font-medium text-gray-700 capitalize">
-                          {project?.client?.fullName || "Admin"}
-                        </span>
-                      </p>
-                      <p>
-                        Created:{" "}
-                        <span className="font-medium text-gray-700">
-                          {formatDate(project.createdAt)}
-                        </span>
-                      </p>
+                      <p>Posted by: <span className="font-medium text-gray-700 capitalize">{project?.client?.role || "Admin"}</span></p>
+                      <p>Owner: <span className="font-medium text-gray-700 capitalize">{project?.client?.fullName || "Admin"}</span></p>
+                      <p>Created: <span className="font-medium text-gray-700">{formatDate(project.createdAt)}</span></p>
                     </div>
 
                     <div className="flex gap-2 flex-wrap mt-auto">
                       {(project.status === "rejected" || project.status === "pending") && (
                         <button
-                          onClick={() => handleStatusChange(project.id, "verified")}
+                          onClick={(e) => { e.stopPropagation(); handleStatusChange(project.id, "verified"); }}
                           className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm flex items-center justify-center gap-1"
                         >
                           <CheckCircle className="w-4 h-4" /> Approve
@@ -438,34 +432,33 @@ export default function Projects() {
                       )}
                       {(project.status === "verified" || project.status === "pending") && (
                         <button
-                          onClick={() => handleStatusChange(project.id, "rejected")}
+                          onClick={(e) => { e.stopPropagation(); handleStatusChange(project.id, "rejected"); }}
                           className="flex-1 px-3 py-2 bg-yellow-500 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm flex items-center justify-center gap-1"
                         >
                           <XCircle className="w-4 h-4" /> Reject
                         </button>
                       )}
                       <button
-                        onClick={() => handleEdit(project)}
+                        onClick={(e) => { e.stopPropagation(); handleEdit(project); }}
                         className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm flex items-center justify-center gap-1"
                       >
                         <Edit className="w-4 h-4" /> Edit
                       </button>
                       <button
-                       onClick={() =>
-                        navigate(`/property/${project.id}`, { state: { property:project } })
-                      }
-                      className="px-3 py-2 bg-white text-blue-600 rounded-lg border border-blue-600 hover:bg-blue-600 hover:text-white transition font-medium text-sm flex items-center justify-center gap-1"                      >
+                        onClick={(e) => { e.stopPropagation(); handleView(project); }}
+                        className="px-3 py-2 bg-white text-blue-600 rounded-lg border border-blue-600 hover:bg-blue-600 hover:text-white transition font-medium text-sm flex items-center justify-center gap-1"
+                      >
                         <Edit className="w-4 h-4" /> View
                       </button>
                       <button
-                        onClick={() => handleDelete(project.id)}
+                        onClick={(e) => { e.stopPropagation(); handleDelete(project.id); }}
                         className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm flex items-center justify-center gap-1"
                       >
                         <Trash2 className="w-4 h-4" /> Delete
                       </button>
                       {(!project.isSold && project.status === "verified") && (
                         <button
-                          onClick={() => handleSold(project.id)}
+                          onClick={(e) => { e.stopPropagation(); handleSold(project.id); }}
                           className="flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors text-sm font-medium"
                         >
                           <Tag className="w-4 h-4" /> Mark Sold

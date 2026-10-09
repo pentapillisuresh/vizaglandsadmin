@@ -59,7 +59,7 @@ function App() {
             <Route path="blog" element={<Blogs />} />
             <Route path="buy-development" element={<BuyDevelopment />} />
             <Route path="content" element={<ContentManager />} />
-            <Route path="/property/:id" element={<PropertyDetail />} />
+            <Route path="/property/:title" element={<PropertyDetail />} />
             <Route path="settings" element={<Settings />} />
             <Route path="/post-property" element={<PostProperty />} />
             <Route path="/post-projects" element={<PostProject />} />

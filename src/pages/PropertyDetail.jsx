@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, Home, Compass, Share2, Bed, Bath, Maximize,
   Building, MapPin, CheckCircle, Phone, Mail, Calendar, ChevronDown, ChevronUp,
-  Monitor, DoorClosed, Presentation, Heart,ChevronLeft, ChevronRight
+  Monitor, DoorClosed, Presentation, Heart, ChevronLeft, ChevronRight
 } from "lucide-react";
 import ApiService from "../hooks/ApiService";
 import AOS from "aos";
@@ -29,27 +29,27 @@ const SocialIcons = {
 
 function PropertyDetail() {
   const swiperRef = useRef(null);
-  const { title } = useParams(); // Changed from id to title
+  const { title } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const [loading, setLoading] = useState(false);
+
+  const [loading, setLoading] = useState(true);
   const [property, setProperty] = useState(null);
+  const [notFound, setNotFound] = useState(false);
+
   const [selectedImage, setSelectedImage] = useState(0);
   const [showContact, setShowContact] = useState(false);
   const [page, setPage] = useState(1);
   const fromUser = location.state?.from || null;
   const [similarProperties, setSimilarProperties] = useState([]);
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phoneNumber: "",
-    message: "",
+    name: "", email: "", phoneNumber: "", message: "",
   });
   const [status, setStatus] = useState("");
   const [showShareOptions, setShowShareOptions] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
 
-  // Favorites functionality
+  // Favorites
   const [favorites, setFavorites] = useState(() => {
     const saved = localStorage.getItem("favorites");
     return saved ? JSON.parse(saved) : [];
@@ -59,61 +59,195 @@ function PropertyDetail() {
 
   const toggleFavorite = (listing) => {
     let updatedFavs = [...favorites];
-
     const exists = updatedFavs.find(item => item.id === listing.id);
-
     if (exists) {
       updatedFavs = updatedFavs.filter(item => item.id !== listing.id);
     } else {
       updatedFavs.push(listing);
     }
-
     setFavorites(updatedFavs);
     localStorage.setItem("favorites", JSON.stringify(updatedFavs));
   };
 
-  // Helper function to create URL-friendly title
+  // Slug helper
   const createSlug = (title) => {
     if (!title) return "";
     return title
       .toLowerCase()
-      .replace(/[^\w\s-]/g, '') // Remove special characters
-      .replace(/\s+/g, '-') // Replace spaces with hyphens
-      .replace(/--+/g, '-') // Replace multiple hyphens with single hyphen
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/--+/g, '-')
       .trim();
   };
 
-  // ✅ Swiper configuration
+  // ✅ MAIN LOADER - tries every source in order
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProperty = async () => {
+      console.log("========================================");
+      console.log("🔵 [PropertyDetail] Loading for param:", title);
+
+      // 1️⃣ From navigation state
+      const stateProp = location.state?.property;
+      if (stateProp) {
+        console.log("✅ Found in location.state:", stateProp?.title);
+        if (!cancelled) {
+          setProperty(stateProp);
+          setLoading(false);
+          setNotFound(false);
+          window.scrollTo(0, 0);
+        }
+        return;
+      }
+
+      if (!title) {
+        console.error("❌ No title param");
+        if (!cancelled) { setLoading(false); setNotFound(true); }
+        return;
+      }
+
+      // 2️⃣ sessionStorage by slug
+      const cachedBySlug = sessionStorage.getItem(`property_${title}`);
+      if (cachedBySlug) {
+        try {
+          const parsed = JSON.parse(cachedBySlug);
+          console.log("✅ Found in sessionStorage by slug:", parsed?.title);
+          if (!cancelled) {
+            setProperty(parsed);
+            setLoading(false);
+            setNotFound(false);
+            window.scrollTo(0, 0);
+            sessionStorage.removeItem(`property_${title}`);
+          }
+          return;
+        } catch (err) {
+          console.error("❌ Parse error (slug):", err);
+        }
+      } else {
+        console.log("❌ No sessionStorage key: property_" + title);
+      }
+
+      // 3️⃣ sessionStorage by id
+      const cachedById = sessionStorage.getItem(`property_id_${title}`);
+      if (cachedById) {
+        try {
+          const parsed = JSON.parse(cachedById);
+          console.log("✅ Found in sessionStorage by id:", parsed?.title);
+          if (!cancelled) {
+            setProperty(parsed);
+            setLoading(false);
+            setNotFound(false);
+            window.scrollTo(0, 0);
+            sessionStorage.removeItem(`property_id_${title}`);
+          }
+          return;
+        } catch (err) {
+          console.error("❌ Parse error (id):", err);
+        }
+      }
+
+      // 4️⃣ API fallback — search BOTH /properties and /properties/getAllProjects
+      console.log("🔄 Fetching from API...");
+      try {
+        const token = localStorage.getItem("token");
+        const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+
+        // Helper: extract an array from any response shape
+        const extractArray = (res) => {
+          if (!res) return [];
+          if (Array.isArray(res)) return res;
+          if (Array.isArray(res.properties)) return res.properties;
+          if (Array.isArray(res.projects)) return res.projects;
+          if (Array.isArray(res.data)) return res.data;
+          if (Array.isArray(res.result)) return res.result;
+          if (Array.isArray(res.items)) return res.items;
+          if (Array.isArray(res.list)) return res.list;
+          if (typeof res === "object") {
+            for (const key of Object.keys(res)) {
+              if (Array.isArray(res[key])) return res[key];
+            }
+          }
+          return [];
+        };
+
+        // Fetch BOTH endpoints in parallel
+        const [propRes, projRes] = await Promise.allSettled([
+          ApiService.get(`/properties?limit=1000`, { headers: authHeader }),
+          ApiService.get(`/properties/getAllProjects?limit=1000`, { headers: authHeader }),
+        ]);
+
+        const propertiesList =
+          propRes.status === "fulfilled" ? extractArray(propRes.value) : [];
+        const projectsList =
+          projRes.status === "fulfilled" ? extractArray(projRes.value) : [];
+
+        console.log("📦 /properties returned:", propertiesList.length);
+        console.log("📦 /properties/getAllProjects returned:", projectsList.length);
+
+        const combined = [...propertiesList, ...projectsList];
+        console.log("📦 Combined list:", combined.length);
+
+        const decodedTitle = decodeURIComponent(title).replace(/-/g, " ").toLowerCase();
+        const targetSlug = title.toLowerCase();
+
+        const found = combined.find((p) => {
+          if (!p) return false;
+          const pSlug = createSlug(p.title);
+          const pTitle = (p.title || "").toLowerCase();
+          return (
+            pSlug === targetSlug ||
+            pTitle === decodedTitle ||
+            pTitle === targetSlug ||
+            String(p.id) === title
+          );
+        });
+
+        if (!cancelled) {
+          if (found) {
+            console.log("✅ Found via API:", found.title);
+            setProperty(found);
+            setNotFound(false);
+          } else {
+            console.error("❌ NOT FOUND. Tried slug:", targetSlug);
+            console.log("   Sample slugs in properties:", propertiesList.slice(0, 5).map(p => createSlug(p.title)));
+            console.log("   Sample slugs in projects:", projectsList.slice(0, 5).map(p => createSlug(p.title)));
+            setNotFound(true);
+          }
+          setLoading(false);
+          window.scrollTo(0, 0);
+        }
+      } catch (err) {
+        console.error("❌ API fetch error:", err);
+        if (!cancelled) {
+          setNotFound(true);
+          setLoading(false);
+        }
+      }
+    };
+
+    loadProperty();
+
+    return () => { cancelled = true; };
+  }, [title, location.state]);
+
+  // Swiper config
   const swiperConfig = {
     modules: [Navigation, Pagination, Autoplay],
     spaceBetween: 30,
     slidesPerView: 1,
     navigation: false,
-    pagination: {
-      clickable: true,
-      dynamicBullets: true
-    },
-    autoplay: {
-      delay: 5000,
-      disableOnInteraction: false,
-    },
+    pagination: { clickable: true, dynamicBullets: true },
+    autoplay: { delay: 5000, disableOnInteraction: false },
     breakpoints: {
-      640: {
-        slidesPerView: 1,
-      },
-      768: {
-        slidesPerView: 2,
-      },
-      1024: {
-        slidesPerView: 3,
-      },
+      640: { slidesPerView: 1 },
+      768: { slidesPerView: 2 },
+      1024: { slidesPerView: 3 },
     },
-    onSwiper: (swiper) => {
-      swiperRef.current = swiper;
-    },
+    onSwiper: (swiper) => { swiperRef.current = swiper; },
   };
 
-  // Share functionality
+  // Share helpers
   const getShareUrl = () => {
     if (property?.title) {
       return `${window.location.origin}/property/${createSlug(property.title)}`;
@@ -129,34 +263,28 @@ function PropertyDetail() {
     const url = `https://wa.me/?text=${encodeURIComponent(getShareMessage() + '\n' + getShareUrl())}`;
     window.open(url, '_blank');
   };
-
   const shareOnFacebook = () => {
     const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(getShareUrl())}`;
     window.open(url, '_blank', 'width=600,height=400');
   };
-
   const shareOnTwitter = () => {
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(getShareMessage())}&url=${encodeURIComponent(getShareUrl())}`;
     window.open(url, '_blank', 'width=600,height=400');
   };
-
   const shareOnLinkedIn = () => {
     const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(getShareUrl())}`;
     window.open(url, '_blank', 'width=600,height=400');
   };
-
   const shareOnTelegram = () => {
     const url = `https://t.me/share/url?url=${encodeURIComponent(getShareUrl())}&text=${encodeURIComponent(getShareMessage())}`;
     window.open(url, '_blank', 'width=600,height=400');
   };
-
   const shareViaEmail = () => {
     const subject = `Check out this property: ${property?.title}`;
     const body = `${getShareMessage()}\n\nView more details: ${getShareUrl()}`;
     const url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = url;
   };
-
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(getShareUrl());
@@ -165,7 +293,6 @@ function PropertyDetail() {
       console.error('Failed to copy: ', err);
     }
   };
-
   const shareViaNative = async () => {
     if (navigator.share) {
       try {
@@ -182,13 +309,11 @@ function PropertyDetail() {
     }
   };
 
-  // Handle input changes
   const handleChange = (e) => {
     const { value, name } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Handle form submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -203,22 +328,12 @@ function PropertyDetail() {
     }
     try {
       const response = await ApiService.post("/leads", payload, {
-        headers: {
-          "Content-Type": "application/json"
-        }
+        headers: { "Content-Type": "application/json" }
       });
-
       if (response) {
-        setFormData({
-          name: "",
-          email: "",
-          phoneNumber: "",
-          message: "",
-        });
-        alert("Thank you for contacting us, our team will contact you very soon ")
-        setTimeout(() => {
-          setStatus("")
-        }, 2000);
+        setFormData({ name: "", email: "", phoneNumber: "", message: "" });
+        alert("Thank you for contacting us, our team will contact you very soon ");
+        setTimeout(() => { setStatus(""); }, 2000);
       } else {
         setStatus("❌ Failed to submit. Please try again.");
       }
@@ -234,76 +349,6 @@ function PropertyDetail() {
     AOS.init({ duration: 800, once: true });
   }, []);
 
-  // ✅ Get property from navigation state or fetch by title
-  useEffect(() => {
-    const prop = location.state?.property;
-    if (prop) {
-      setProperty(prop);
-      window.scrollTo(0, 0);
-      // Update URL to use title instead of ID if needed
-      if (prop.title && window.location.pathname !== `/property/${createSlug(prop.title)}`) {
-        navigate(`/property/${createSlug(prop.title)}`, { state: { property: prop, from: fromUser }, replace: true });
-      }
-    } else if (title) {
-      fetchPropertyByTitle();
-    }
-  }, [location.state, title]);
-
-  const fetchPropertyByTitle = async () => {
-    try {
-      setLoading(true);
-      // Decode the title from URL
-      const decodedTitle = decodeURIComponent(title).replace(/-/g, ' ');
-      
-      // Fetch all properties and find by title
-      const response = await ApiService.get(`/properties?limit=100`);
-      
-      if (response?.properties) {
-        const foundProperty = response.properties.find(
-          prop => createSlug(prop.title) === title || 
-                   prop.title.toLowerCase() === decodedTitle.toLowerCase()
-        );
-        
-        if (foundProperty) {
-          setProperty(foundProperty);
-          window.scrollTo(0, 0);
-        } else {
-          console.error("Property not found with title:", title);
-          navigate('/properties-list');
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching property by title:', error);
-      navigate('/properties-list');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchPropertyDetails = async () => {
-    try {
-      const response = await ApiService.get(`/properties/${id}`, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log("Dashboard API Response:", response);
-
-      if (response?.property) {
-        const propertyDetails = response.property;
-        setProperty(propertyDetails);
-      } else {
-        console.warn("Unexpected response format:", response);
-      }
-
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   const getpropertyByCategory = async () => {
     const payload = {
       page: page,
@@ -313,25 +358,13 @@ function PropertyDetail() {
     }
     try {
       const response = await ApiService.get('/properties', payload, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' }
       });
-
-      console.log("Dashboard API Response:", response);
-
       if (response?.properties) {
-        const data = response.properties;
-        const rrr = data.filter((item) => item.id !== property?.id)
-        setSimilarProperties(data || []);
-      } else {
-        console.warn("Unexpected response format:", response);
+        setSimilarProperties(response.properties || []);
       }
-
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -357,44 +390,31 @@ function PropertyDetail() {
   const updateViewCount = async () => {
     try {
       const clientToken = localStorage.getItem("token");
-      const response = await ApiService.put(`/properties/updateView/${property?.id}`,
+      await ApiService.put(`/properties/updateView/${property?.id}`,
         {
           headers: {
             Authorization: `Bearer ${clientToken}`,
             'Content-Type': 'application/json'
           }
         },
-      )
-      // if (response) {
-      //   navigate('./')
-      // } else {
-      //   console.log("rrr::", response?.message)
-      // }
+      );
     } catch (err) {
-      alert(err.message);
+      console.log(err.message);
     }
   };
 
   useEffect(() => {
-    const userDetails = localStorage.getItem("clientDetails");
     const isLogin = localStorage.getItem("isLogin");
-    if (isLogin && property?.id) {
-      addViewProperty()
-    }
+    if (isLogin && property?.id) addViewProperty();
     if (property?.id) {
-      setTimeout(() => {
-        updateViewCount()
-      }, 5000);
+      setTimeout(() => { updateViewCount(); }, 5000);
     }
-  }, [property?.id])
+  }, [property?.id]);
 
   useEffect(() => {
-    if (property) {
-      getpropertyByCategory()
-    }
-  }, [property])
+    if (property) getpropertyByCategory();
+  }, [property]);
 
-  // ✅ Utility: Format price
   const formatPrice = (price) => {
     if (!price) return "-";
     const num = parseFloat(price);
@@ -403,28 +423,20 @@ function PropertyDetail() {
     return `₹${num.toLocaleString()}`;
   };
 
-  // ✅ Description toggle functionality
-  const toggleDescription = () => {
-    setShowFullDescription(!showFullDescription);
-  };
+  const toggleDescription = () => setShowFullDescription(!showFullDescription);
 
-  // ✅ Function to truncate description
   const getTruncatedDescription = (description, maxLength = 300) => {
     if (!description) return "";
-    if (description.length <= maxLength || showFullDescription) {
-      return description;
-    }
+    if (description.length <= maxLength || showFullDescription) return description;
     return description.substring(0, maxLength) + "...";
   };
 
-  // ✅ Simplify access
   const profile = property?.profile || {};
   const address = property?.address || {};
   const category = property?.category || {};
   const client = property?.client || {};
 
   let galleryImages = [];
-
   try {
     if (Array.isArray(property?.photos)) {
       galleryImages = property.photos;
@@ -442,22 +454,21 @@ function PropertyDetail() {
 
   const safeShow = (val) => val !== null && val !== undefined && val !== "" && val !== 0;
 
-  // ✅ FIXED: Improved back navigation function - Always go to properties-list
+  // ✅ Back to Listings (works whether opened same-tab or new-tab)
+   // ✅ Back to Listings — always go to the correct list page
+   // ✅ Back to Listings (always goes to the correct list page)
+   // ✅ Back to Listings — reads source from URL query param
   const handleBackToListings = () => {
-    navigate(-1);
+    // Read ?from=projects or ?from=properties from the URL
+    const params = new URLSearchParams(window.location.search);
+    const source = params.get("from") || "properties";
+    const targetPath = source === "projects" ? "/projects" : "/properties";
+
+    // Navigate directly to the correct list
+    navigate(targetPath, { replace: true });
   };
 
-  // ✅ Handle similar property click with title-based URL
-  const handleSimilarPropertyClick = (property) => {
-    const slug = createSlug(property.title);
-    navigate(`/property/${slug}`, {
-      state: {
-        property,
-        from: fromUser
-      }
-    });
-  };
-
+  // ✅ LOADING STATE
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -469,7 +480,8 @@ function PropertyDetail() {
     );
   }
 
-  if (!property) {
+  // ✅ NOT FOUND STATE
+  if (notFound || !property) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -490,7 +502,6 @@ function PropertyDetail() {
       {/* Header Bar */}
       <div className="bg-[#003366] text-white py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          {/* ✅ FIXED: Back Button - Always goes to properties-list */}
           <button
             onClick={handleBackToListings}
             className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
@@ -505,7 +516,6 @@ function PropertyDetail() {
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3">
-          {/* Left Section */}
           <div className="lg:col-span-3">
             {/* Image Gallery */}
             <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
@@ -515,12 +525,8 @@ function PropertyDetail() {
                   alt={property?.title}
                   className="w-full h-full object-cover"
                 />
-                {/* ❤️ Favorite Button - Added to image gallery */}
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleFavorite(property);
-                  }}
+                  onClick={(e) => { e.stopPropagation(); toggleFavorite(property); }}
                   className="absolute top-3 right-3 z-20"
                 >
                   <Heart
@@ -548,7 +554,6 @@ function PropertyDetail() {
                 )}
               </div>
 
-              {/* Thumbnails */}
               <div className="p-4 flex gap-2 overflow-x-auto">
                 {galleryImages.map((img, idx) => (
                   <button
@@ -599,61 +604,26 @@ function PropertyDetail() {
                   <span className="text-gray-700 font-medium">Share this project:</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  {/* Share Options */}
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={shareOnWhatsApp}
-                      className="w-10 h-10 flex items-center justify-center bg-green-500 hover:bg-green-600 rounded-full transition-colors"
-                      title="Share on WhatsApp"
-                    >
+                    <button onClick={shareOnWhatsApp} className="w-10 h-10 flex items-center justify-center bg-green-500 hover:bg-green-600 rounded-full transition-colors" title="Share on WhatsApp">
                       <img src={SocialIcons.whatsapp} alt="WhatsApp" className="w-5 h-5 filter invert" />
                     </button>
-
-                    <button
-                      onClick={shareOnFacebook}
-                      className="w-10 h-10 flex items-center justify-center bg-blue-600 hover:bg-blue-700 rounded-full transition-colors"
-                      title="Share on Facebook"
-                    >
+                    <button onClick={shareOnFacebook} className="w-10 h-10 flex items-center justify-center bg-blue-600 hover:bg-blue-700 rounded-full transition-colors" title="Share on Facebook">
                       <img src={SocialIcons.facebook} alt="Facebook" className="w-5 h-5 filter invert" />
                     </button>
-
-                    <button
-                      onClick={shareOnTwitter}
-                      className="w-10 h-10 flex items-center justify-center bg-blue-400 hover:bg-blue-500 rounded-full transition-colors"
-                      title="Share on Twitter"
-                    >
+                    <button onClick={shareOnTwitter} className="w-10 h-10 flex items-center justify-center bg-blue-400 hover:bg-blue-500 rounded-full transition-colors" title="Share on Twitter">
                       <img src={SocialIcons.twitter} alt="Twitter" className="w-5 h-5 filter invert" />
                     </button>
-
-                    <button
-                      onClick={shareOnLinkedIn}
-                      className="w-10 h-10 flex items-center justify-center bg-blue-800 hover:bg-blue-900 rounded-full transition-colors"
-                      title="Share on LinkedIn"
-                    >
+                    <button onClick={shareOnLinkedIn} className="w-10 h-10 flex items-center justify-center bg-blue-800 hover:bg-blue-900 rounded-full transition-colors" title="Share on LinkedIn">
                       <img src={SocialIcons.linkedin} alt="LinkedIn" className="w-5 h-5 filter invert" />
                     </button>
-
-                    <button
-                      onClick={shareOnTelegram}
-                      className="w-10 h-10 flex items-center justify-center bg-blue-500 hover:bg-blue-600 rounded-full transition-colors"
-                      title="Share on Telegram"
-                    >
+                    <button onClick={shareOnTelegram} className="w-10 h-10 flex items-center justify-center bg-blue-500 hover:bg-blue-600 rounded-full transition-colors" title="Share on Telegram">
                       <img src={SocialIcons.telegram} alt="Telegram" className="w-5 h-5 filter invert" />
                     </button>
-
-                    <button
-                      onClick={shareViaEmail}
-                      className="w-10 h-10 flex items-center justify-center bg-red-500 hover:bg-red-600 rounded-full transition-colors"
-                      title="Share via Email"
-                    >
+                    <button onClick={shareViaEmail} className="w-10 h-10 flex items-center justify-center bg-red-500 hover:bg-red-600 rounded-full transition-colors" title="Share via Email">
                       <img src={SocialIcons.email} alt="Email" className="w-5 h-5 filter invert" />
                     </button>
-
-                    <button
-                      onClick={shareViaNative}
-                      className="w-10 h-10 flex items-center justify-center bg-gray-600 hover:bg-gray-700 rounded-full transition-colors"
-                      title="Share"
-                    >
+                    <button onClick={shareViaNative} className="w-10 h-10 flex items-center justify-center bg-gray-600 hover:bg-gray-700 rounded-full transition-colors" title="Share">
                       <img src={SocialIcons.share} alt="Share" className="w-5 h-5 filter invert" />
                     </button>
                   </div>
@@ -664,107 +634,43 @@ function PropertyDetail() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-6 border-y">
                 {category.name === "Plot" || category.name === "Land" || category.name === "Commercial Land" ? (
                   <>
-                    {category.name === "Plot" && (
-                      safeShow(profile?.plotArea) && (
-                        <>
+                    {category.name === "Plot" && safeShow(profile?.plotArea) && (
+                      <>
+                        <FeatureCard icon={<Maximize size={22} />} label="Plot Area" value={`${profile?.plotArea} ${profile?.areaUnit || "sqft"}`} />
                         <FeatureCard
                           icon={<Maximize size={22} />}
-                          label="Plot Area"
-                          value={`${profile?.plotArea} ${profile?.areaUnit || "sqft"}`}
+                          label={`Per ${profile?.areaUnit || "sqft"} `}
+                          value={profile?.landArea ? Math.round(parseFloat(property?.price || 0) / parseFloat(profile?.plotArea)) : 0}
                         />
-                        <FeatureCard
-                            icon={<Maximize size={22} />}
-                            label={`Per ${profile?.areaUnit || "sqft"} `}
-                            value={
-                              profile?.landArea
-                                ? Math.round(
-                                    parseFloat(property?.price || 0) / parseFloat(profile?.plotArea)
-                                  )
-                                : 0
-                            }                          />
-                        </>
-                      )
+                      </>
                     )}
-                    {category.name === "Land" || category.name === "Commercial Land" && (
-                      safeShow(profile?.landArea) && (
-                        <>
-                          <FeatureCard
-                            icon={<Maximize size={22} />}
-                            label="Land Area"
-                            value={`${profile?.landArea} ${profile?.areaUnit || "sqft"}`}
-                          />
-                          <FeatureCard
-                            icon={<Maximize size={22} />}
-                            label={`Per ${profile?.areaUnit || "sqft"} `}
-                            value={
-                              profile?.landArea
-                                ? Math.round(
-                                    parseFloat(property?.price || 0) / parseFloat(profile?.landArea)
-                                  )
-                                : 0
-                            }                          />
-                        </>
-                      )
-                    )}
-                    {category.name === "Plot" && (
-                      safeShow(profile?.facing) && (
+                    {(category.name === "Land" || category.name === "Commercial Land") && safeShow(profile?.landArea) && (
+                      <>
+                        <FeatureCard icon={<Maximize size={22} />} label="Land Area" value={`${profile?.landArea} ${profile?.areaUnit || "sqft"}`} />
                         <FeatureCard
-                          icon={<Compass size={22} />}
-                          label="Facing"
-                          value={profile?.facing}
-                        />)
+                          icon={<Maximize size={22} />}
+                          label={`Per ${profile?.areaUnit || "sqft"} `}
+                          value={profile?.landArea ? Math.round(parseFloat(property?.price || 0) / parseFloat(profile?.landArea)) : 0}
+                        />
+                      </>
+                    )}
+                    {category.name === "Plot" && safeShow(profile?.facing) && (
+                      <FeatureCard icon={<Compass size={22} />} label="Facing" value={profile?.facing} />
                     )}
                   </>
                 ) : (
                   <>
-                    {/* Non-plot property fields */}
-                    {safeShow(profile?.bedrooms) && (
-                      <FeatureCard icon={<Bed size={24} />} label="Bedrooms" value={profile?.bedrooms} />
-                    )}
-
-                    {safeShow(profile?.bathrooms) && (
-                      <FeatureCard icon={<Bath size={24} />} label="Bathrooms" value={profile?.bathrooms} />
-                    )}
-
-                    {safeShow(profile?.carpetArea) && (
-                      <FeatureCard
-                        icon={<Maximize size={24} />}
-                        label="Carpet Area"
-                        value={`${profile?.carpetArea} ${profile?.areaUnit || "sqft"}`}
-                      />
-                    )}
-                    {safeShow(profile?.workstations) && (
-                      <FeatureCard
-                        icon={<Monitor size={24} />}
-                        label="Work Station"
-                        value={`${profile?.workstations}`}
-                      />
-                    )}
-                    {safeShow(profile?.cabins) && (
-                      <FeatureCard
-                        icon={<DoorClosed size={24} />}
-                        label="Cabin"
-                        value={`${profile?.cabins}`}
-                      />
-                    )}
-                    {safeShow(profile?.conferenceRooms) && (
-                      <FeatureCard
-                        icon={<Presentation size={24} />}
-                        label="Meeting Rooms"
-                        value={`${profile?.conferenceRooms}`}
-                      />
-                    )}
-
-                    {safeShow(profile?.status) && (
-                      <FeatureCard icon={<Building size={24} />} label="Status" value={profile?.status} />
-                    )}
+                    {safeShow(profile?.bedrooms) && <FeatureCard icon={<Bed size={24} />} label="Bedrooms" value={profile?.bedrooms} />}
+                    {safeShow(profile?.bathrooms) && <FeatureCard icon={<Bath size={24} />} label="Bathrooms" value={profile?.bathrooms} />}
+                    {safeShow(profile?.carpetArea) && <FeatureCard icon={<Maximize size={24} />} label="Carpet Area" value={`${profile?.carpetArea} ${profile?.areaUnit || "sqft"}`} />}
+                    {safeShow(profile?.workstations) && <FeatureCard icon={<Monitor size={24} />} label="Work Station" value={`${profile?.workstations}`} />}
+                    {safeShow(profile?.cabins) && <FeatureCard icon={<DoorClosed size={24} />} label="Cabin" value={`${profile?.cabins}`} />}
+                    {safeShow(profile?.conferenceRooms) && <FeatureCard icon={<Presentation size={24} />} label="Meeting Rooms" value={`${profile?.conferenceRooms}`} />}
+                    {safeShow(profile?.status) && <FeatureCard icon={<Building size={24} />} label="Status" value={profile?.status} />}
                   </>
                 )}
               </div>
 
-
-
-              {/* Property Details - Updated Design */}
               <Section title="Property Details">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {safeShow(category.name) && (
@@ -773,7 +679,6 @@ function PropertyDetail() {
                       <div className="flex-1">
                         <span className="block text-sm text-gray-500 mt-1">Property Type</span>
                         <span className="text-[#003366] font-medium">{category.name}</span>
-
                       </div>
                     </div>
                   )}
@@ -783,7 +688,6 @@ function PropertyDetail() {
                       <div className="flex-1">
                         <span className="block text-sm text-gray-500 mt-1">Locality</span>
                         <span className="text-[#003366] font-medium">{address.locality}</span>
-
                       </div>
                     </div>
                   )}
@@ -793,7 +697,6 @@ function PropertyDetail() {
                       <div className="flex-1">
                         <span className="block text-sm text-gray-500 mt-1">City</span>
                         <span className="text-[#003366] font-medium">{address.city}</span>
-
                       </div>
                     </div>
                   )}
@@ -803,14 +706,12 @@ function PropertyDetail() {
                       <div className="flex-1">
                         <span className="block text-sm text-gray-500 mt-1">Total Floors</span>
                         <span className="text-[#003366] font-medium">{profile.totalFloors}</span>
-
                       </div>
                     </div>
                   )}
                 </div>
               </Section>
 
-              {/* Nearby Details - Updated Design */}
               {Array.isArray(address?.near_by) && address.near_by.length > 0 && (
                 <Section title="Nearby Places">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -819,9 +720,7 @@ function PropertyDetail() {
                         <CheckCircle size={20} className="text-orange-600" />
                         <div className="flex-1">
                           <span className="text-[#003366] font-medium">{place.info}</span>
-                          {place.distance && (
-                            <span className="block text-sm text-gray-500 mt-1">{place.distance}</span>
-                          )}
+                          {place.distance && <span className="block text-sm text-gray-500 mt-1">{place.distance}</span>}
                         </div>
                       </div>
                     ))}
@@ -829,7 +728,6 @@ function PropertyDetail() {
                 </Section>
               )}
 
-              {/* Amenities */}
               {Array.isArray(property?.amenities) && property?.amenities.length > 0 && (
                 <Section title="Amenities & Features">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -843,50 +741,31 @@ function PropertyDetail() {
                 </Section>
               )}
 
-
-              {/* Overview */}
               {safeShow(property?.description) && (
                 <Section title="Overview">
                   <div className="text-gray-700 leading-relaxed">
-                    <p className="whitespace-pre-line">
-                      {getTruncatedDescription(property?.description)}
-                    </p>
+                    <p className="whitespace-pre-line">{getTruncatedDescription(property?.description)}</p>
                     {property?.description && property.description.length > 300 && (
-                      <button
-                        onClick={toggleDescription}
-                        className="mt-3 flex items-center gap-1 text-orange-600 hover:text-orange-700 font-medium transition-colors"
-                      >
-                        {showFullDescription ? (
-                          <>
-                            <ChevronUp size={16} />
-                            Show Less
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDown size={16} />
-                            Read More
-                          </>
-                        )}
+                      <button onClick={toggleDescription} className="mt-3 flex items-center gap-1 text-orange-600 hover:text-orange-700 font-medium transition-colors">
+                        {showFullDescription ? (<><ChevronUp size={16} />Show Less</>) : (<><ChevronDown size={16} />Read More</>)}
                       </button>
                     )}
                   </div>
                 </Section>
               )}
 
-              {/* Map Section */}
               <Section title="Location on Map">
                 <PropertyMap lat={address?.lat} lon={address?.lon} />
               </Section>
             </div>
           </div>
         </div>
-
       </div>
-    </div >
+    </div>
   );
 }
 
-/* 🧩 Small Reusable Components */
+/* Reusable Components */
 const FeatureCard = ({ icon, label, value }) => (
   <div className="text-center">
     <div className="flex justify-center mb-2">
@@ -903,6 +782,7 @@ const Section = ({ title, children }) => (
     {children}
   </div>
 );
+
 const Detail = ({ label, value }) => (
   <div className="flex justify-between py-3 border-b">
     <span className="text-gray-600">{label}</span>
