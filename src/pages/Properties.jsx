@@ -386,7 +386,7 @@ export default function Properties() {
                       className="w-full h-48 object-cover"
                       onError={(e) => {
                         e.currentTarget.onerror = null;
-                        e.currentTarget.src = '/vizaglogo.jpg';
+                        e.currentTarget.src = '/vizaglogo1.jpg';
                       }}
                     />
                     {/* Active Toggle */}

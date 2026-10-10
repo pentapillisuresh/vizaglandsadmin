@@ -353,7 +353,7 @@ export default function Projects() {
                       src={getPhotoSrc(project.photos)}
                       alt={project.title}
                       className="w-full h-48 object-cover"
-                      onError={(e) => { e.target.src = '/vizaglogo.jpg'; }}
+                      onError={(e) => { e.target.src = '/vizaglogo1.jpg'; }}
                     />
 
                     <div className="absolute top-3 right-3 flex items-center gap-2">

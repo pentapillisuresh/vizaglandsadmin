@@ -56,7 +56,7 @@ export default function Sidebar() {
       {/* Header / Logo */}
       <div className="h-20 px-6 bg-white border-b border-gray-200 flex items-center justify-center">
         <img
-          src="/vizaglogo.jpg"
+          src="/vizaglogo1.jpg"
           alt="VizagLands Logo"
           className="w-full h-16 object-contain"
         />
